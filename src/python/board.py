@@ -27,10 +27,10 @@ def add_unit(board, unit):
   '''
   if not unit:
     return 0
-  board['unit'] = unit
+  board['unit'] = deepcopy(unit)
   unit_width = unit['members'][:, 0].max() + 1
   shift = (board['width'] - unit_width) // 2
-  [shift_unit(unit, 0) for _ in range(shift)]
+  [shift_unit(board['unit'], 0) for _ in range(shift)]
   if check_unit(board):
     return 1
   del board['unit']
@@ -55,6 +55,7 @@ def move_unit(board, move):
   if move < 4:
     shift_unit(new_unit, move)
   else:
+    return 0
     rotate_unit(new_unit, move - 4)
   if check_unit(board, new_unit):
     board['unit'] = new_unit
@@ -73,14 +74,27 @@ def check_unit(board, unit=None):
       any(unit[:, 0] >= board['width']) or 
       any(unit[:, 1] >= board['height'])):
     return 0
-  return all(board['board'][unit[:, 0], unit[:, 1]] == 0)
+  return all(board['board'][unit[:, 1], unit[:, 0]] == 0)
 
 
 def lock_unit(board):
+  if not board['unit']:
+    print('returning')
+    return
+  print('locking')
   unit = board['unit']['members']
   board['board'][unit[:, 1], unit[:, 0]] = 1
   del board['unit']
   board['unit'] = None
+
+
+def print_board(board):
+  pr = np.zeros(board['board'].shape, dtype='int32')
+  bd = board['board']
+  un = board['unit']['members']
+  pr[bd == 1] = 1
+  pr[un[:, 1], un[:, 0]] = 2
+  print(pr)
 
 
 #def get_neighbors(cell):
