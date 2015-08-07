@@ -26,14 +26,14 @@ def shift_unit(unit, direction):
     unit['members'][:, 0] = unit['members'][:, 0] - 1
     unit['pivot'][0] = unit['pivot'][0] - 1
   elif direction == 2:
-    unit['members'][:, 0] = unit['members'][:, 0] - 1 + unit['members'][:, 1] % 2
-    unit['members'][:, 1] = unit['members'][:, 1] + 1
-    unit['pivot'][0] = unit['pivot'][0] -1 + unit['pivot'][1] % 2
-    unit['pivot'][1] = unit['pivot'][1] + 1
-  elif direction == 3:
     unit['members'][:, 0] = unit['members'][:, 0] + unit['members'][:, 1] % 2
     unit['members'][:, 1] = unit['members'][:, 1] + 1
     unit['pivot'][0] = unit['pivot'][0] + unit['pivot'][1] % 2
+    unit['pivot'][1] = unit['pivot'][1] + 1
+  elif direction == 3:
+    unit['members'][:, 0] = unit['members'][:, 0] - 1 + unit['members'][:, 1] % 2
+    unit['members'][:, 1] = unit['members'][:, 1] + 1
+    unit['pivot'][0] = unit['pivot'][0] -1 + unit['pivot'][1] % 2
     unit['pivot'][1] = unit['pivot'][1] + 1
 
 

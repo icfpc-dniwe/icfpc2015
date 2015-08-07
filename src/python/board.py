@@ -11,10 +11,10 @@ Module for board
 '''
 
 
-def define_board(width, height, filled):
+def define_board(width, height, filled = []):
   board = np.zeros((width, height), dtype='int32')
   for cell in filled:
-    board[cell] = 1
+    board[cell[1], cell[0]] = 1
   return {'width': width,
           'height': height,
           'board': board,
@@ -22,12 +22,18 @@ def define_board(width, height, filled):
 
 
 def add_unit(board, unit):
+  '''
+  Return 1 if can be added.
+  '''
+  if not unit:
+    return 0
   board['unit'] = unit
-  unit_width = np.max(unit[:, 0]) + 1
+  unit_width = unit['members'][:, 0].max() + 1
   shift = (board['width'] - unit_width) // 2
   [shift_unit(unit, 0) for _ in range(shift)]
   if check_unit(board):
     return 1
+  del board['unit']
   board['unit'] = None
   return 0
 
@@ -36,11 +42,15 @@ def move_unit(board, move):
   '''
   0 = 'e'
   1 = 'w'
-  2 = 'sw'
-  3 = 'se'
+  2 = 'se'
+  3 = 'sw'
   4 = 'cw'
   5 = 'ccw'
+  
+  Return 1 if can be moved.
   '''
+  if not board['unit']:
+    return 0
   new_unit = deepcopy(board['unit'])
   if move < 4:
     shift_unit(new_unit, move)
@@ -54,12 +64,23 @@ def move_unit(board, move):
 
 def check_unit(board, unit=None):
   '''
-  Return 0 if unit cannot be placed
+  Return 1 if unit can be placed.
   '''
   if not unit:
     unit = board['unit']
   unit = unit['members']
+  if ((unit < 0).any() or 
+      any(unit[:, 0] >= board['width']) or 
+      any(unit[:, 1] >= board['height'])):
+    return 0
   return all(board['board'][unit[:, 0], unit[:, 1]] == 0)
+
+
+def lock_unit(board):
+  unit = board['unit']['members']
+  board['board'][unit[:, 1], unit[:, 0]] = 1
+  del board['unit']
+  board['unit'] = None
 
 
 #def get_neighbors(cell):
