@@ -8,11 +8,11 @@ Module generates solution
 '''
 
 
-def generate_solution(problem, seq):
+def generate_solution(problem, seq, tag):
   solution = [
     {'problemId': problem['id'],
      'seed': seed, 
-     'tag': 'AllDown',
+     'tag': tag,
      'solution': ''.join([move2chr(move) for move in seq[idx]])}
      for idx, seed in enumerate(problem['seeds'])
     ]
