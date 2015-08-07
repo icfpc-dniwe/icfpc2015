@@ -6,7 +6,7 @@ import Data.Array
 import Field
 
 fieldPicture :: ResultField -> Picture
-fieldPicture f = Pictures $ step False [0..height]
+fieldPicture f = Scale 13 13 $ Pictures $ step False [0..height]
   where (_, (width, height)) = bounds f
 
         t = 2 * pi / 6
@@ -20,4 +20,4 @@ fieldPicture f = Pictures $ step False [0..height]
         line y = map (\x -> Translate (fromIntegral x * 2) 0 $ cpol x y) [0..width]
 
         step _ [] = []
-        step r (y:ys) = map (Translate (if r then 1 else 0) (fromIntegral y)) (line y) ++ step (not r) ys
+        step r (y:ys) = map (Translate (if r then 1 else 0) (negate $ fromIntegral y * 2)) (line y) ++ step (not r) ys
