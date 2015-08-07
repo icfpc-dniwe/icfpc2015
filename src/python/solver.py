@@ -54,18 +54,18 @@ def solve(problem):
     problem['cur_num'] = seed
     unit = next_unit(problem)
     while add_unit(problem['board'], unit):
-      print(unit)
+      #print(unit)
       cur = 0
       while move_unit(problem['board'], seq[cur]):
-        print(cur)
-        print_board(problem['board'])
+        #print(cur)
+        #print_board(problem['board'])
         ret_seq[idx] += [seq[cur]]
         cur += 1
         if cur >= len(seq):
           cur = 0
-        input("Press ENTER to continue...")
+        #input("Press ENTER to continue...")
       ret_seq[idx] += [seq[cur]]
       lock_unit(problem['board'])
       unit = next_unit(problem)
-      print(problem['board'])
+      #print(problem['board'])
   return ret_seq

@@ -12,7 +12,7 @@ Module for board
 
 
 def define_board(width, height, filled = []):
-  board = np.zeros((width, height), dtype='int32')
+  board = np.zeros((height, width), dtype='int32')
   for cell in filled:
     board[cell[1], cell[0]] = 1
   return {'width': width,
@@ -79,9 +79,7 @@ def check_unit(board, unit=None):
 
 def lock_unit(board):
   if not board['unit']:
-    print('returning')
     return
-  print('locking')
   unit = board['unit']['members']
   board['board'][unit[:, 1], unit[:, 0]] = 1
   del board['unit']
