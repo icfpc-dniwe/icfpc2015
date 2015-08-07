@@ -18,21 +18,6 @@ def define_unit(members, pivot):
           'pivot': np.array(pivot, dtype='int32')}
 
 
-def move_unit(unit, move):
-  '''
-  0 = 'e'
-  1 = 'w'
-  2 = 'sw'
-  3 = 'se'
-  4 = 'cw'
-  5 = 'ccw'
-  '''
-  if move < 4:
-    shift_unit(unit, move)
-  else:
-    rotate_unit(unit, move - 4)
-
-
 def shift_unit(unit, direction):
   if direction == 0:
     unit['members'][:, 0] = unit['members'][:, 0] + 1
