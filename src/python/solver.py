@@ -26,7 +26,11 @@ def create_problem(str_problem):
             for un in json_problem['units']
           ]
   seeds = json_problem['sourceSeeds']
-  problem = {'board': board, 'units': units, 'seeds': seeds, 'cur_num': None}
+  problem = {'id': json_problem['id'], 
+             'board': board, 
+             'units': units, 
+             'seeds': seeds, 
+             'cur_num': None}
   return problem
 
 
