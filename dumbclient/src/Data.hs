@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings, DeriveGeneric, DeriveAnyClass #-}
 
 module Data where
 
+import Control.Monad
 import Network.Wreq
-import Control.Lens
+import Control.Lens ((^.))
 import Data.Aeson
 import Data.Aeson.TH
 import Data.List
@@ -25,15 +26,16 @@ data RawInput = RawInput { id :: Integer
                          , height :: Integer
                          , filled :: [Cell]
                          , sourceLength :: Integer
-                         , sourceSeeds :: Integer
+                         , sourceSeeds :: [Integer]
                          }
              deriving (Show, Eq, Generic, FromJSON)
 
-getInput :: Integer :: IO RawInput
+getInput :: Integer -> IO RawInput
 getInput n = do
   r <- get $ "http://icfpcontest.org/problems/problem_" ++ show n ++ ".json"
+  unless ((r^.responseStatus.statusCode) == 200) $ fail "getInput: failed"
   rs <- asJSON r
-  return (r^.responseBody)
+  return (rs^.responseBody)
 
 data Direction = E | W | SE | SW
                deriving (Show, Eq)
@@ -53,14 +55,14 @@ formatCmd (Move SE) = 'l'
 formatCmd (Turn CW) = 'd'
 formatCmd (Turn CCW) = 'k'
 
-data Output = Output { problemId :: Integer
-                     , seed :: Integer
-                     , tag :: String
-                     , solution :: [Command]
-                     }
+data RawOutput = RawOutput { problemId :: Integer
+                           , seed :: Integer
+                           , tag :: String
+                           , solution :: [Command]
+                           }
                deriving (Show, Eq)
 
-instance ToJSON Output where
+instance ToJSON RawOutput where
   toJSON x = object [ "problemId" .= problemId x
                     , "seed" .= seed x
                     , "tag" .= tag x
@@ -69,5 +71,5 @@ instance ToJSON Output where
 
 postOutput :: Integer -> [RawOutput] -> IO ()
 postOutput teamid outputs = do
-  r <- post ("https://davar.icfpcontest.org/teams/" ++ teamid ++ "/solutions/") (toJSON outputs)
-  unless ((r^.responseStatus.statusCode) == 200) "postOutput: failed"
+  r <- post ("https://davar.icfpcontest.org/teams/" ++ show teamid ++ "/solutions/") (toJSON outputs)
+  unless ((r^.responseStatus.statusCode) == 200) $ fail "postOutput: failed"
