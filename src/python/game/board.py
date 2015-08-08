@@ -11,6 +11,10 @@ class Board:
         self._rows = {}
 
     # TODO
-    def add_cell(self, point):
+    def add_cells(self, points):
         pass
-    
+   
+    # TODO
+    def is_locked(self, points):
+        pass
+

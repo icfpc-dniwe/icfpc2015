@@ -21,12 +21,12 @@
 import sys
 import argparse
 
-from aux.input import parse_problem
+from aux.input import parse_problem, parse_commands
 from aux.output import output_solution
 from aux.web import *
 
-from icfpc.game.solution import get_solution, run_commands
-
+from game.solution import get_solution, run_commands
+from common.tools import nvl
 
 DEBUG_MODE = 1
 
@@ -34,11 +34,16 @@ DEBUG_MODE = 1
 def process_problem(json_string, args):
  
   (problem, seeds) = parse_problem(json_string)
-  phrases = args.p
+  phrases = nvl(args.p, [])
   results = []
 
   for seed in seeds:
-    run = args.r or get_solution(problem, seed, phrases)
+
+    run = None
+    if args.r is not None:
+      run = parse_commands(args.r)
+    else:
+      run = get_solution(problem, seed, phrases)
 
     if DEBUG_MODE == 1:
       dbg = run_commands(problem, seed, run, phrases)
@@ -65,7 +70,7 @@ def main(args):
       print(solution)
                               
   else:
-    for fn in filenames:
+    for fn in nvl(filenames, []):
       h = open(fn, 'r') 
       json_string = h.read()
       results = process_problem(json_string, args)
@@ -84,7 +89,7 @@ if __name__ == '__main__':
   parser.add_argument('-r', action='store',      type=str, help='Run specified series of commands instead of bot')
 
   parser.add_argument('-n', action='store',      type=int, help='Load JSON problem #n from the site')
-  parser.add_argument('-a', action='store',      type=int, help='Tag of the solution')
+  parser.add_argument('-a', action='store',      type=str, help='Tag of the solution')
   parser.add_argument('-u', action='store_true',           help='Do upload the solution')
 
   args = parser.parse_args()

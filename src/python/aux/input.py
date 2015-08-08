@@ -4,6 +4,7 @@ import json
 
 from game.unit import Unit 
 from game.board import Board
+from common.constants import *
 
 #  "id": number
 #     A unique number identifying the problem 
@@ -40,8 +41,15 @@ class Problem:
         self.src_length = src_length
 
 
-def parse_unit(p):
-    return Unit(p['pivot'], p['cells'])
+def parse_commands(run):
+    return list(map(lambda s: int(from_symbol(s)), run))
+
+
+def _parse_cell(p):
+    return (int(p['x']), int(p['y']))
+
+def _parse_unit(p):
+    return Unit(_parse_cell(p['pivot']), list(map(_parse_cell, p['members'])))
 
 def parse_problem(json_string):
     p = json.loads(json_string)
@@ -50,12 +58,16 @@ def parse_problem(json_string):
     src_length = p['sourceLength']
     seeds = p['sourceSeeds']
     
+
     width = p['width']
     height = p['height']
-
     board = Board(width, height)
 
-    units = list(map(parse_unit, p['units']))
+    filled = list(map(_parse_cell, p['filled']))
+    board.add_cells(filled)
+
+
+    units = list(map(_parse_unit, p['units']))
 
     problem = Problem(problem_id, board, units, src_length)
 
