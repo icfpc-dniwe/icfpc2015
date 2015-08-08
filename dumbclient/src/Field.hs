@@ -9,7 +9,7 @@ import Data.Array
 import Data.Ix
 
 import qualified Data as D
-import Data (RawInput, TDirection(..), Cell(..), Unit(..))
+import Data (RawInput, Direction(..), TDirection(..), Cell(..), Unit(..))
 
 data Field = Field { filled :: [Cell]
                    , width :: Integer

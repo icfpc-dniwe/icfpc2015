@@ -41,15 +41,14 @@ class Problem:
 
 
 def parse_problem(json_string):
-    json.loads(json_string)
+    p = json.loads(json_string)
    
-    # TODO read from json directly
-    problem_id = None
-    src_length = None
-    seeds = []
+    problem_id = p['id']
+    src_length = p['sourceLength']
+    seeds = p['sourceSeeds']
     
-    width = None
-    height = None
+    width = p['width']
+    height = p['height']
 
     #TODO fill the board
     board = Board(width, height)
