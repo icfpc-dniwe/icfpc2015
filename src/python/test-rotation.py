@@ -7,6 +7,7 @@ import random
 
 from game.unit import Unit
 from common.constants import *
+from common.tools import hex2points
 
 # Root ::= {"units": [Unit]}
 # Unit ::= {"color": Color, "pivot": [Cell], "members": [Cell]}
@@ -33,8 +34,8 @@ def fmt_unit(unit, color):
               , "pivot": %s
               , "members": [%s]}''' % (
                     fmt_color(color)
-                  , fmt_cell(unit.pivot)
-                  , ', '.join(map(fmt_cell, unit.members)))
+                  , fmt_cell(hex2points(unit.pivot))
+                  , ', '.join(map(fmt_cell, hex2points(unit.members))))
 
 
 
@@ -49,7 +50,7 @@ def rand_members(length, pivot, radius):
 
 random.seed(1488)
 
-units = list(map(lambda p: unit(p, rand_members(4, p, 3)), [
+units = list(map(lambda p: Unit(p, rand_members(4, p, 3)), [
     (4, 4), (11, 4), (11, 4), (11, 11)
 ]))
 
@@ -61,9 +62,9 @@ for unit in units:
     dst = unit.clone()
     dst.rotate(Rotate.CW)
 
-    result.append(fmt_unit(src, COLORS[0])
-    result.append(fmt_unit(dst, COLORS[1])
+    result.append(fmt_unit(src, COLORS[0]))
+    result.append(fmt_unit(dst, COLORS[1]))
     
 
-print '{"units": [%s]}' % ', '.join(result)
+print('{"units": [%s]}' % (', '.join(result)))
     
