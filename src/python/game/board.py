@@ -10,7 +10,10 @@ class Board:
     def __init__(self, width, height, filled=[]):
         self.width = width
         self.height = height
-        self.filled = points2hex(filled)
+        if len(filled) < 1:
+            self.filled = np.zeros((0, 3), dtype='int32')
+        else:
+            self.filled = points2hex(filled)
         #self._rows = {}
     
     
@@ -28,7 +31,8 @@ class Board:
         Add points to board and check for filled rows
         Return number of rows completed (and deleted)
         '''
-        self.filled = np.append(self.filled, points)
+        
+        self.filled = np.vstack((self.filled, points))
         return self.check_rows()
 
 
