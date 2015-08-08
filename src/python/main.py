@@ -25,35 +25,30 @@ from io.input import parse_problem
 from io.output import output_solution
 from io.web import *
 
-from game.solution import get_solution, run_commands
+from icfpc.game.solution import get_solution, run_commands
 
 
 DEBUG_MODE = 1
 
 
 def process_problem(json_string, args):
-  
-  phrases = args.p
-  # TODO phrases!
-
+ 
   (problem, seeds) = parse_problem(json_string)
-  
+  phrases = args.p
+  results = []
+
   for seed in seeds:
-    
-    run = args.r
+    run = args.r or get_solution(problem, seed, phrases)
 
-    # if no run provided, get the bot output (this is an actual solution)
-    if run is None:
-      run = get_solution(problem, seed, None)
+    if DEBUG_MODE == 1:
+      dbg = run_commands(problem, seed, run, phrases)
+      print(dbg)
 
-    # execute commands in a given run (this is for debug reasons)
-    if DEBUG_MODE = 1:
-      dbg = run_commands(problem, seed, run)
-      # TODO output debug information
+    results.append((problem.problem_id, seed, run))
 
-    return (problem.problem_id, seed, run)
+  return results
 
-# phrases, time_limit, memory_limit, runs):
+
 
 def main(args):
   
@@ -62,8 +57,8 @@ def main(args):
   
   if problem_num is not None:
     json_string = load_problem(problem_num)
-    (problem_id, seed, run) = process_problem(json_string, args)
-    solution = output_solution(problem_id, seed, run, args.a)
+    results = process_problem(json_string, args)
+    solution = '\n\n'.join(map(lambda d: output_solution(*d, tag=args.a), results))
  
     if args.u:
       upload_solution(solution)
@@ -73,11 +68,10 @@ def main(args):
   else:
     for fn in filenames:
       h = open(fn, 'r') 
-      result = process_problem(f.read(), args)
-      if result is not None:
-        (problem_id, seed, run) = result
-        solution = output_solution(problem_id, seed, run, args.a)
-        print solution
+      json_string = h.read()
+      results = process_problem(json_string, args)
+      solution = '\n\n'.join(map(lambda d: output_solution(*d), results))
+      print(solution)
 
 
 if __name__ == '__main__':
@@ -88,7 +82,7 @@ if __name__ == '__main__':
   parser.add_argument('-t', action='store',      type=int, help='Time limit, in seconds, to produce output')
   parser.add_argument('-m', action='store',      type=int, help='Memory limit, in megabytes, to produce output')
 
-  parser.add_argument('-r', action='append',     type=str, help='Run specified series of commands instead of bot')
+  parser.add_argument('-r', action='store',      type=str, help='Run specified series of commands instead of bot')
 
   parser.add_argument('-n', action='store',      type=int, help='Load JSON problem #n from the site')
   parser.add_argument('-a', action='store',      type=int, help='Tag of the solution')
