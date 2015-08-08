@@ -6,6 +6,7 @@ import json
 import random
 
 from game.unit import Unit
+from common.constants import *
 
 # Root ::= {"units": [Unit]}
 # Unit ::= {"color": Color, "pivot": [Cell], "members": [Cell]}
@@ -48,8 +49,21 @@ def rand_members(length, pivot, radius):
 
 random.seed(1488)
 
-UNITS = list(map(lambda p: unit(p, rand_members(4, p, 3)), [
+units = list(map(lambda p: unit(p, rand_members(4, p, 3)), [
     (4, 4), (11, 4), (11, 4), (11, 11)
 ]))
 
 
+result = []
+
+for unit in units:
+    src = unit
+    dst = unit.clone()
+    dst.rotate(Rotate.CW)
+
+    result.append(fmt_unit(src, COLORS[0])
+    result.append(fmt_unit(dst, COLORS[1])
+    
+
+print '{"units": [%s]}' % ', '.join(result)
+    
