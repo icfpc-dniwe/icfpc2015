@@ -59,7 +59,9 @@ visualize args = do
       inp <- getInput $ onlineProblem args
       return $ resultField $ toField inp 0
     (File, fmt) -> do
-      f <- BL.readFile $ filePath args
+      f <- case filePath args of
+        "-" -> BL.getContents
+        fp -> BL.readFile fp
       case fmt of
        Standard -> do
          let inp = fromJust $ J.decode f
