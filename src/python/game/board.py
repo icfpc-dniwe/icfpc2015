@@ -2,19 +2,22 @@
 
 # IDEA only non-empty rows to store
 
+import numpy as np
 
-# TODO
+from common.tools import point2hex
+
 class Board:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self._rows = {}
+        self.filled = []
+        #self._rows = {}
 
-    # TODO
+
     def add_cells(self, points):
-        pass
-   
-    # TODO
-    def is_locked(self, points):
+        points = point2hex(points)
+
+
+    def is_filled(self, points):
         pass
 

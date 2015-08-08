@@ -5,22 +5,25 @@ import numpy as np
 from copy import deepcopy
 
 from common.constants import *
+from common.tools import points2hex
 
 # IDEA pools of units to avoid multiple entries
 
 class Unit:
     def __init__(self, pivot, cells):
-        pivot2d = np.array(pivot, dtype='int32')
-        self.pivot = np.zeros((3,), dtype='int32')
-        self.pivot[0] = pivot2d[0] - (pivot2d[1] - (pivot2d[1]&1)) // 2
-        self.pivot[1] = -self.pivot[0] - pivot2d[1]
-        self.pivot[2] = pivot2d[1]
+        #pivot2d = np.array(pivot, dtype='int32')
+        #self.pivot = np.zeros((3,), dtype='int32')
+        #self.pivot[0] = pivot2d[0] - (pivot2d[1] - (pivot2d[1]&1)) // 2
+        #self.pivot[1] = -self.pivot[0] - pivot2d[1]
+        #self.pivot[2] = pivot2d[1]
+        self.pivot = points2hex(pivot)
         
-        cells2d = np.array(cells)
-        self.cells = np.zeros((len(cells), 3), dtype='int32')
-        self.cells[:, 0] = cells2d[:, 0] - (cells2d[:, 1] - (cells2d[:, 1] & 1)) // 2
-        self.cells[:, 1] = -self.cells[:, 0] - cells2d[:, 1]
-        self.cells[:, 2] = cells2d[:, 1]
+        #cells2d = np.array(cells)
+        #self.cells = np.zeros((len(cells), 3), dtype='int32')
+        #self.cells[:, 0] = cells2d[:, 0] - (cells2d[:, 1] - (cells2d[:, 1] & 1)) // 2
+        #self.cells[:, 1] = -self.cells[:, 0] - cells2d[:, 1]
+        #self.cells[:, 2] = cells2d[:, 1]
+        self.cells = points2hex(cells)
 
 
     def clone(self):
