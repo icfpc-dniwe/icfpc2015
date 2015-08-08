@@ -40,6 +40,13 @@ class Problem:
         self.src_length = src_length
 
 
+# TODO for now just extract all the data
+def _parse_unit(p):
+    pass
+
+def _parse_board(p):
+    pass
+
 def parse_problem(json_string):
     p = json.loads(json_string)
    
