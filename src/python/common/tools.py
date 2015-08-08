@@ -28,7 +28,12 @@ def points2hex(points):
 
 
 def hex2points(p_hex):
-    points = np.zeros((len(p_hex), 2), dtype='int32')
-    points[:, 0] = p_hex[:, 0] + (p_hex[:, 2] - (p_hex[:, 2] & 1)) // 2
-    points[:, 1] = p_hex[:, 2]
+    if len(p_hex.shape) < 2:
+        points = np.zeros((2,), dtype='int32')
+        points[0] = p_hex[0] + (p_hex[2] - (p_hex[2] & 1)) // 2
+        points[1] = p_hex[2]
+    else:
+        points = np.zeros((len(p_hex), 2), dtype='int32')
+        points[:, 0] = p_hex[:, 0] + (p_hex[:, 2] - (p_hex[:, 2] & 1)) // 2
+        points[:, 1] = p_hex[:, 2]
     return points
