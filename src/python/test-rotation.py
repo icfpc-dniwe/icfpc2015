@@ -40,12 +40,16 @@ def fmt_unit(unit, color):
 
 
 
-def rand_point(pivot, radius):
+def rand_point(radius):
     return (random.randint(-radius, radius), random.randint(-radius, radius))
 
-def rand_members(length, pivot, radius):
-    return [rand_point(pivot, radius) for _ in range(length)]
+def point_sum(p1, p2):
+    (x1, y1) = p1
+    (x2, y2) = p2
+    return (x1+x2, y1+y2)
 
+def rand_members(length, pivot, radius):
+    return [point_sum(pivot, rand_point(radius)) for _ in range(length)]
 
 
 random.seed(1488)
