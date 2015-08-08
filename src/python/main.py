@@ -21,9 +21,9 @@
 import sys
 import argparse
 
-from io.input import parse_problem
-from io.output import output_solution
-from io.web import *
+from aux.input import parse_problem
+from aux.output import output_solution
+from aux.web import *
 
 from icfpc.game.solution import get_solution, run_commands
 
