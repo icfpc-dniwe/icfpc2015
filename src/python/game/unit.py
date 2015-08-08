@@ -23,7 +23,7 @@ class Unit:
         #self.cells[:, 0] = cells2d[:, 0] - (cells2d[:, 1] - (cells2d[:, 1] & 1)) // 2
         #self.cells[:, 1] = -self.cells[:, 0] - cells2d[:, 1]
         #self.cells[:, 2] = cells2d[:, 1]
-        self.cells = points2hex(cells)
+        self.cells = list(map(points2hex, cells))
 
 
     def clone(self):
