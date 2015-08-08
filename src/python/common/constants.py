@@ -9,6 +9,6 @@ class Move:
  SE = 4  #  {l, m, n, o, space, 5}
 
 class Rotate:
- CW = 1  #  {d, q, r, v, z, 1}
- CCW = 2 #  {k, s, t, u, w, x}
+ CW = 5  #  {d, q, r, v, z, 1}
+ CCW = 6 #  {k, s, t, u, w, x}
 

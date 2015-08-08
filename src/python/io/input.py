@@ -2,7 +2,7 @@
 
 import json
 
-from game.unit import unit 
+from game.unit import Unit 
 from game.board import Board
 
 #  "id": number
@@ -40,12 +40,8 @@ class Problem:
         self.src_length = src_length
 
 
-# TODO for now just extract all the data
-def _parse_unit(p):
-    pass
-
-def _parse_board(p):
-    pass
+def parse_unit(p):
+    return Unit(p['pivot'], p['cells'])
 
 def parse_problem(json_string):
     p = json.loads(json_string)
@@ -57,11 +53,9 @@ def parse_problem(json_string):
     width = p['width']
     height = p['height']
 
-    #TODO fill the board
     board = Board(width, height)
 
-    # TODO create units
-    units = []
+    units = list(map(parse_unit, p['units']))
 
     problem = Problem(problem_id, board, units, src_length)
 
