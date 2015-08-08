@@ -35,7 +35,7 @@ def fmt_unit(unit, color):
               , "members": [%s]}''' % (
                     fmt_color(color)
                   , fmt_cell(hex2points(unit.pivot))
-                  , ', '.join(map(fmt_cell, map(hex2points, unit.members))))
+                  , '\n, '.join(map(fmt_cell, map(hex2points, unit.cells))))
 
 
 
