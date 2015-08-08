@@ -30,6 +30,13 @@ class Unit:
         return deepcopy(self)
 
 
+    def move(self, direction):
+        if direction == Rotate.CW or direction == Rotate.CCW:
+            self.rotate(direction)
+        else:
+            self.shift(direction)
+
+
     def rotate(self, direction):
         # moving to (0, 0, 0)
         self.cells = self.cells - self.pivot
@@ -41,7 +48,7 @@ class Unit:
         self.cells = self.cells + self.pivot
 
 
-    def move(self, direction):
+    def shift(self, direction):
         if direction == Move.W: # W
             shift = np.array([-1, 1, 0], dtype='int32')
         elif direction == Move.E: # E
