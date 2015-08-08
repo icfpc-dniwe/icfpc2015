@@ -32,11 +32,11 @@ class Unit:
 
     def rotate(self, direction):
         # moving to (0, 0, 0)
-        self.cells = seld.cells - self.pivot
+        self.cells = self.cells - self.pivot
         if direction == Rotate.CW: # CW
-            self.cells = np.hstack(-self.cells[:, 2], -self.cells[:, 0], -self.cells[:, 1])
+            self.cells = np.vstack((-self.cells[:, 2], -self.cells[:, 0], -self.cells[:, 1])).T
         else: # CCW
-            self.cells = np.hstack(-self.cells[:, 1], -self.cells[:, 2], -self.cells[:, 0])
+            self.cells = np.vstack((-self.cells[:, 1], -self.cells[:, 2], -self.cells[:, 0])).T
         # moving back
         self.cells = self.cells + self.pivot
 
