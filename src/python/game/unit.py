@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 
+# Can't import this or any other module in ipython otherwise
+import os, sys
+PACKAGE_PARENT = '..'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
 import numpy as np
 
 from copy import deepcopy
 
 from common.constants import *
-from common.tools import points2hex
+from common.tools import points2hex, hex2points
 
 # IDEA pools of units to avoid multiple entries
 
@@ -79,20 +85,21 @@ class Unit:
         self.cells = self.cells + shift
         self.pivot = self.pivot + shift
 
-    def get_edge_members():
+    def get_edge_cells(self):
         retv = []
-        for c in self.cells:
-            x,y = hex2points([c])[0]
-            if (x+1, y-1) in self.cells and
-               (x+1, y)   in self.cells and
-               (x+1, y+1) in self.cells and
-               (y+1, x-1) in self.cells and
-               (y+1, x)   in self.cells and
-               (y+1, x-1) in self.cells:
+        for c in hex2points(np.array(self.cells)):
+            x,y = c
+            if not (\
+                (x+1, y-1) in self.cells and\
+                (x+1, y)   in self.cells and\
+                (x+1, y+1) in self.cells and\
+                (y+1, x-1) in self.cells and\
+                (y+1, x)   in self.cells and\
+                (y+1, x-1) in self.cells):
                 retv += [points2hex(c)]
         return retv
 
-    def shift_to(coods):
+    def shift_to(self, coods):
         dx = coords[0] - self.pivot[0]
         dy = coords[1] - self.pivot[1]
         dz = coords[2] - self.pivot[2]
@@ -110,5 +117,3 @@ class Unit:
         cell[0] += dx
         cell[1] += dy
         cell[2] += dz
-
-

@@ -2,6 +2,12 @@
 
 # IDEA only non-empty rows to store
 
+# Can't import this or any other module in ipython otherwise
+import os, sys
+PACKAGE_PARENT = '..'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
 import numpy as np
 
 from common.tools import points2hex, hex2points
@@ -87,35 +93,14 @@ class Board:
                 rows_deleted += 1
         return rows_deleted
 
-    def get_heights(board):
-        hts = []
-        for i in range(self.width):
-            for j in range(self.height):
-                if points2hex((j,i)) in self.filled:
-                    hts += [i]
-                    break
-        return hts
+    def __get_all_final_states(self, unit, path):
+        moves = [Move.W, Move.E, Move.SW, Move.SE, Rotate.CW, Rotate.CCW]
+        newst = deepcopy(unit).move(action)
+        all_paths = []
+        if not is_locked(newst):    
+            all_paths += [(self.__get_all_final_states(newst, path + [action]) for action in moves)]
+        else:
+            return all_paths
 
-    def get_all_final_states(unit):
-        retv = []
-        hts = self.get_heights(board)
-        old_pivot = unit.pivot
-        u_edges = unit.get_edge_members()
-        for (y, x) in enumerate(hts):
-            for edge in u_edges:
-                new_u = Unit(deepcopy(edge), deepcopy(u_edges))
-                new_u.shift_to(points2hex((y, x)))
-
-                new_old_pivot = deepcopy(old_pivot)
-                Unit.shift_cell_along(new_old_pivot, new_u['pivot'], (y, x))
-                if not is_locked(new_u.cells):
-                    retv += [Unit(deepcopy(new_u), Rotate.CW, 0)]
-
-                    for d in [Rotate.CW,Rotate.CCW]:
-                        rot_u = Unit(deepcopy(edge), deepcopy(new_u['members']))
-                        for i in range(3): #180 degrees
-                            new_u.rotate(d)
-                            roatate_member(new_old_pivot, rot_u['pivot'], d)
-                                if not is_locked(board, new_u):
-                                    retv += [Unit(deepcopy(new_old_pivot), deepcopy(rot_u['members'])), d, i]
-        return retv
+    def get_valid_final_states(self, unit):
+        return self.__get_all_final_states(unit, [])
