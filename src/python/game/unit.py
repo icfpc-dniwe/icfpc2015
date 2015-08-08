@@ -79,3 +79,36 @@ class Unit:
         self.cells = self.cells + shift
         self.pivot = self.pivot + shift
 
+    def get_edge_members():
+        retv = []
+        for c in self.cells:
+            x,y = hex2points([c])[0]
+            if (x+1, y-1) in self.cells and
+               (x+1, y)   in self.cells and
+               (x+1, y+1) in self.cells and
+               (y+1, x-1) in self.cells and
+               (y+1, x)   in self.cells and
+               (y+1, x-1) in self.cells:
+                retv += [points2hex(c)]
+        return retv
+
+    def shift_to(coods):
+        dx = coords[0] - self.pivot[0]
+        dy = coords[1] - self.pivot[1]
+        dz = coords[2] - self.pivot[2]
+        self.pivot = coords
+        for c in self.cells:
+            c[0] += dx
+            c[1] += dy
+            c[2] += dz
+
+    @staticmethod
+    def shift_cell_along(cell, pivot, newpivot):
+        dx = newpivot[0] - pivot[0]
+        dy = newpivot[1] - pivot[1]
+        dz = newpivot[2] - pivot[2]
+        cell[0] += dx
+        cell[1] += dy
+        cell[2] += dz
+
+

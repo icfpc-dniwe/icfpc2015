@@ -86,3 +86,36 @@ class Board:
                 self.shift_down(z)
                 rows_deleted += 1
         return rows_deleted
+
+    def get_heights(board):
+        hts = []
+        for i in range(self.width):
+            for j in range(self.height):
+                if points2hex((j,i)) in self.filled:
+                    hts += [i]
+                    break
+        return hts
+
+    def get_all_final_states(unit):
+        retv = []
+        hts = self.get_heights(board)
+        old_pivot = unit.pivot
+        u_edges = unit.get_edge_members()
+        for (y, x) in enumerate(hts):
+            for edge in u_edges:
+                new_u = Unit(deepcopy(edge), deepcopy(u_edges))
+                new_u.shift_to(points2hex((y, x)))
+
+                new_old_pivot = deepcopy(old_pivot)
+                Unit.shift_cell_along(new_old_pivot, new_u['pivot'], (y, x))
+                if not is_locked(new_u.cells):
+                    retv += [Unit(deepcopy(new_u), Rotate.CW, 0)]
+
+                    for d in [Rotate.CW,Rotate.CCW]:
+                        rot_u = Unit(deepcopy(edge), deepcopy(new_u['members']))
+                        for i in range(3): #180 degrees
+                            new_u.rotate(d)
+                            roatate_member(new_old_pivot, rot_u['pivot'], d)
+                                if not is_locked(board, new_u):
+                                    retv += [Unit(deepcopy(new_old_pivot), deepcopy(rot_u['members'])), d, i]
+        return retv

@@ -14,7 +14,6 @@ def nvl2(val, res1, res2):
         return res1
     return res2
 
-
 def points2hex(points):
     points2d = np.array(points, dtype='int32')
     if type(points) is tuple:
