@@ -2,6 +2,7 @@ module Visualize where
 
 import Graphics.Gloss
 import Data.Array
+import Linear.V3
 
 import Types
 
@@ -15,7 +16,7 @@ fieldPicture f = Scale 13 13 $ Pictures $ step False [0..height]
           where clr = case f ! (x, y) of
                   NotFilled -> white
                   Built -> green
-                  CellPart (CColor r g b) -> makeColor r g b 1
+                  CellPart (V3 r g b) -> makeColor r g b 1
 
         line y = map (\x -> Translate (fromIntegral x * 2) 0 $ cpol x y) [0..width]
 

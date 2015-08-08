@@ -9,6 +9,7 @@ import Control.Monad.State
 import Data.Array
 import Data.Ix
 import Linear.V2
+import Linear.V3
 
 import ReadWrite (Unit(..))
 import qualified ReadWrite as D
@@ -49,7 +50,7 @@ resultField field = array size pts
         cells = M.fromList $ map convUnit $ members $ unit field
         convUnit p =
           let (V2 x y) = unitCenter field + p
-          in ((x, y), CellPart $ CColor 1 0 0)
+          in ((x, y), CellPart $ V3 1 0 0)
         mpts = built `M.union` cells
         pts = map (\p -> maybe (p, NotFilled) (p, ) $ M.lookup p mpts) $ range size
 
