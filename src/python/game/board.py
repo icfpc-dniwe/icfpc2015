@@ -40,7 +40,7 @@ class Board:
         '''
         Return 1 if points cannot be placed on board
         '''
-        return check_bounds(self, points) or \
+        return self.check_bounds(points) or \
           any([(points == cell).any() for cell in self.filled])
     
     

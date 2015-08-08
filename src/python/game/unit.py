@@ -30,6 +30,25 @@ class Unit:
         return deepcopy(self)
 
 
+    def undo_move(self, direction):
+        if direction == Move.E:
+            self.shift(Move.W)
+        elif direction == Move.W:
+            self.shift(Move.E)
+        elif direction == Move.SE:
+            shift = np.array([0, 1, -1], dtype='int32')
+            self.cells += shift
+            self.pivot += shift
+        elif direction == Move.SW:
+            shift = np.array([1, 0, -1], dtype='int32')
+            self.cells += shift
+            self.pivot += shift
+        elif direction == Rotate.CW:
+            self.rotate(Rotate.CCW)
+        elif direction == Rotate.CCW:
+            self.rotate(Rotate.CW)
+
+
     def move(self, direction):
         if direction == Rotate.CW or direction == Rotate.CCW:
             self.rotate(direction)

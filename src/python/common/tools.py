@@ -39,3 +39,7 @@ def hex2points(p_hex):
         points[:, 0] = p_hex[:, 0] + (p_hex[:, 2] - (p_hex[:, 2] & 1)) // 2
         points[:, 1] = p_hex[:, 2]
     return points
+
+
+def get_score(size, lines):
+    return size + 100 * (1 + ls) * ls / 2
