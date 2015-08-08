@@ -24,16 +24,27 @@ class Board:
 
 
     def add_cells(self, points):
+        '''
+        Add points to board and check for filled rows
+        Return number of rows completed (and deleted)
+        '''
         self.filled = np.append(self.filled, points)
-        check_rows(self)
+        return check_rows(self)
 
 
     def is_locked(self, points):
+        '''
+        Return 1 if points cannot be placed on board
+        '''
         return check_bounds(self, points) or \
           any([(points == cell).any() for cell in self.filled])
 
     
     def check_rows(self):
+        '''
+        Return number of rows completed ob board.
+        Delete this rows.
+        '''
         rows_deleted = 0
         for z in range(self.height):
             w = np.where(self.filled[:, 2] == z)
