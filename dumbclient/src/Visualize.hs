@@ -3,7 +3,7 @@ module Visualize where
 import Graphics.Gloss
 import Data.Array
 
-import Field
+import Types
 
 fieldPicture :: ResultField -> Picture
 fieldPicture f = Scale 13 13 $ Pictures $ step False [0..height]
@@ -15,8 +15,8 @@ fieldPicture f = Scale 13 13 $ Pictures $ step False [0..height]
           where clr = case f ! (x, y) of
                   NotFilled -> white
                   Built -> green
-                  CellPart -> red
-        
+                  CellPart (CColor r g b) -> makeColor r g b 1
+
         line y = map (\x -> Translate (fromIntegral x * 2) 0 $ cpol x y) [0..width]
 
         step _ [] = []
