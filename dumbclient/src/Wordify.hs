@@ -31,24 +31,24 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
                , "ia!"
                , "r'lyeh"
                , "yuggoth"
-               , "deep seven" --?
-               , "chtonians" --?
+               , "deep seven" -- ?
+               , "chtonians" -- ?
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
-               , "bigboote" --?
-               , "tsathoggua" --?
-               , "unnamable" --?
-               , "yith" --?
-               , "great race of yith" --?
-               , "celeano" --?
-               , "great hall of celeano" --?
-               , "plateau of leng" --?
-               , "abyss" --?
-               , "lost carcosa" --?
-               , "unknown kadath" --?
-               , "the dreamlands" --?
-               , "the underworld" --?
-               , "dreamlands" --?
-               , "underworlds" --?
+               , "bigboote" -- ?
+               , "tsathoggua" -- ?
+               , "unnamable" -- ?
+               , "yith" -- ?
+               , "great race of yith" -- ?
+               , "celeano" -- ?
+               , "great hall of celeano" -- ?
+               , "plateau of leng" -- ?
+               , "abyss" -- ?
+               , "lost carcosa" -- ?
+               , "unknown kadath" -- ?
+               , "the dreamlands" -- ?
+               , "the underworld" -- ?
+               , "dreamlands" -- ?
+               , "underworlds" -- ?
                ]
 
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b
