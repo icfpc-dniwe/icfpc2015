@@ -45,7 +45,7 @@ validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
                 check f'@(Field { unit = Nothing }) = Just $ DeadEnd (absCoords u) (score f' - startScore)
 
         cheight = maximum ys - minimum ys
-          where ys = map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList $ members startu
+          where ys = map (\(V3 _ _ z) -> z) $ S.toList $ members startu
         startScore = score startf
         
         tryOr cmds next olds f = mergeSol (path cmds (tryOr cmds next) olds f) (next olds f)
