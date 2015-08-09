@@ -63,8 +63,8 @@ solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
         sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
-findBest :: Solutions -> (Solution, Float)
-findBest = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
+findBest :: HCells -> Solutions -> (Solution, Float)
+findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
   where scorify cells sol scor = scor + fromIntegral (sum $ map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList cells)
 
 data Bot = Bot { solution :: Solution
@@ -73,14 +73,14 @@ data Bot = Bot { solution :: Solution
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f = Bot { solution = fst $ findBest $ solutions $ validPaths f
+newBot f = Bot { solution = fst $ findBest (filled f) $ solutions $ validPaths f
                , unitNum = sourceLength f
                }
 
 advanceBot :: Field -> Bot -> (Command, Bot)
 advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
-          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest $ solutions $ validPaths f
+          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest (filled f) $ solutions $ validPaths f
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot
