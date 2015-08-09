@@ -6,7 +6,7 @@ import qualified Data.Map as M
 import Types
 import Field
 
-data SolTree = DeadEnd
+data SolTree = DeadEnd Cell
              | Crossroad (Map Command SolTree)
              deriving (Show, Eq)
 

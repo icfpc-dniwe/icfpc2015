@@ -18,7 +18,7 @@ maps = M.fromList $ map (second S.fromList) list
                , (Move E, "bcefy2")
                , (Move SW, "aghij4")
                , (Move SE, "lmno 5")
-               , (Turn CW, "dqrvzl")
+               , (Turn CW, "dqrvz1")
                , (Turn CCW, "kstuwx")
                ]
 
