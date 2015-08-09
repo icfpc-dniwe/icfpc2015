@@ -33,14 +33,25 @@ instance (FromJSON a) => FromJSON (V3 a) where
 type Cell = V2 Int
 
 data Direction = E | W | SE | SW
-               deriving (Show, Eq, Ord)
+               deriving (Show, Eq, Ord, Enum, Bounded)
 
 data TDirection = CW | CCW
-                deriving (Show, Eq, Ord)
+                deriving (Show, Eq, Ord, Enum, Bounded)
 
-data Command = Move Direction
-             | Turn TDirection
+data Command = Move !Direction
+             | Turn !TDirection
              deriving (Show, Eq, Ord)
+
+instance Bounded Command where
+  minBound = Move minBound
+  maxBound = Turn maxBound
+
+instance Enum Command where
+  fromEnum (Move m) = fromEnum m
+  fromEnum (Turn t) = fromEnum (maxBound :: Direction) + 1 + fromEnum t
+  toEnum n
+    | n <= fromEnum (maxBound :: Direction) = Move $ toEnum n
+    | otherwise = Turn $ toEnum $ n - fromEnum (maxBound :: Direction) - 1
 
 type CColor = V3 Float
 

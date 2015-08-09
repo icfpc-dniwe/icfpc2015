@@ -16,6 +16,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Data.ViewState hiding (Command)
 
+import Bot
 import Types
 import qualified ReadWrite as D
 import ReadWrite (RawOutput(..), getInput, postOutput)
@@ -97,6 +98,7 @@ playEvent ri args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case 
   _ -> return (cmds, updateViewStateWithEvent ev st, field, pic)
 
   where doCmd' cmd = do
+          print $ validSolutionsSimple field
           field' <- case command cmd field of
                     Nothing -> do
                       putStrLn "Placement failure!"

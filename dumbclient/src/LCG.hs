@@ -12,7 +12,7 @@ data LCG = LCG { seed :: Integer
 nextLCG :: LCG -> (Integer, LCG)
 nextLCG g = (res, g { seed = seed' })
   where seed' = (mult g * seed g + incr g) `mod` modulus g
-        res = (seed g `shiftR` 16) .&. 0xFFFF
+        res = (seed g `shiftR` 16) .&. 0x7FFF
 
 defLCG :: Integer -> LCG
 defLCG s = LCG { seed = s

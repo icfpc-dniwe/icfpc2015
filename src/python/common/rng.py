@@ -9,4 +9,4 @@ def next_number(prev):
   inc = 12345
   mod = 1 << 32
   num = (prev * mult + inc) % mod
-  return (num, num & (0xFFFF << 16))
+  return (num, (num >> 16) & 0xFFFF)

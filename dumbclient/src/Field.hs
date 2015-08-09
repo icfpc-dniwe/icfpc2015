@@ -41,9 +41,12 @@ data Field = Field { filled :: Set HCell
 
 -- TODO: more things in cubic coordinates
 
+absCoords :: HUnit -> Set HCell
+absCoords u = S.map (+ center u) $ members u
+
 validate :: Field -> Bool
 validate f@(Field { unit = Just u }) = distinct && borders
-  where cells = S.map (+ center u) $ members u
+  where cells = absCoords u
         distinct = cells == (cells S.\\ filled f)
         borders = all (\(V2 x y) -> x >= 0 && x < width f && y >= 0 && y < height f) $ map hcellToCell $ S.toList cells
 validate (Field { unit = Nothing }) = True

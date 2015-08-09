@@ -62,10 +62,11 @@ test-suite tests
   main-is:             Tests.hs
   hs-source-dirs:      tests
   build-depends:       base >=4.8 && <4.9
+                     , tasty
+                     , tasty-hunit
+                     , tasty-quickcheck
+                     , QuickCheck
                      , dumbclient
                      , linear
-                     , QuickCheck
-                     , tasty
-                     , tasty-quickcheck
   ghc-options:         -Wall
   default-language:    Haskell2010
