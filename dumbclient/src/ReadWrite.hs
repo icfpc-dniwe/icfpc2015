@@ -36,11 +36,11 @@ getInput n = do
   return (rs^.responseBody)
 
 data RawOutput = RawOutput { problemId :: Integer
-                           , seed :: Int
+                           , seed :: Integer
                            , tag :: Text
                            , solution :: String
                            }
-               deriving (Show, Eq, Generic, ToJSON)
+               deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 postOutput :: Integer -> ByteString -> [RawOutput] -> IO ()
 postOutput teamid token outputs = do

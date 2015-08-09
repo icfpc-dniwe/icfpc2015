@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Wordify where
 
 import Control.Arrow
@@ -20,6 +22,9 @@ maps = M.fromList $ map (second S.fromList) list
                , (Turn CCW, "kstuwx")
                ]
 
+remaps :: Map Char Command
+remaps = M.fromList $ concatMap (\(cmd, cs) -> map (, cmd) $ S.toList cs) $ M.toList maps
+
 powerWords :: Map Solution String
 powerWords = M.fromList $ map (\s -> (map conv s, s)) list
   where conv c = fst $ fromJust $ find (S.member c . snd) $ M.toList maps
@@ -31,3 +36,6 @@ findMaybe f = listToMaybe . mapMaybe f
 
 wordify :: Solution -> String
 wordify = map (S.findMin . (maps M.!))
+
+dewordify :: String -> Solution
+dewordify = map (remaps M.!)

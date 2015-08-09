@@ -3,6 +3,7 @@
 import Control.Monad
 import Control.Exception
 import Data.Char
+import Data.List
 import Data.Maybe
 import System.IO
 import qualified Data.Aeson as J
@@ -16,6 +17,7 @@ import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Data.ViewState hiding (Command)
 
 import Types
+import qualified ReadWrite as D
 import ReadWrite (RawOutput(..), getInput, postOutput)
 import Field (Field(..), toField, command, resultField)
 import ProcessedField (processedField)
@@ -28,6 +30,7 @@ data InputType = Online
 
 data InputFormat = Standard
                  | Processed
+                 | Solved
                  deriving (Show, Read, Eq)
 
 data Arguments = Arguments { inputType :: InputType
@@ -83,8 +86,8 @@ type PlayState = (Solution, ViewState, Field, Picture)
 playShow :: PlayState -> IO Picture
 playShow (_, st, _, pic) = return $ applyViewPortToPicture (viewStateViewPort st) $ pic
 
-playEvent :: Arguments -> Event -> PlayState -> IO PlayState
-playEvent args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c of
+playEvent :: D.RawInput -> Arguments -> Event -> PlayState -> IO PlayState
+playEvent ri args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c of
   'h' -> doCmd' (Move W)
   'j' -> doCmd' (Move SW)
   'k' -> doCmd' (Move SE)
@@ -97,36 +100,47 @@ playEvent args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c o
           field' <- case command cmd field of
                     Nothing -> do
                       putStrLn "Placement failure!"
-                      playFinish args (reverse cmds)
+                      finish (reverse cmds)
                     Just f -> return f
           print (score field', sourceLength field', cmd)
           let cmds' = cmd : cmds
           when (isNothing $ unit field') $ do
             putStrLn "Success!"
-            playFinish args (reverse cmds')
+            finish (reverse cmds')
           return (cmds', st, field', fieldPicture $ resultField field')
+
+        finish cmds' = do
+          print cmds'
+          let cmdsS = wordify cmds'
+          putStrLn cmdsS
+          case inputType args of
+           File -> return ()
+           Online -> do
+             send <- queryUser "Send solution to the server?" False
+             when send $ postOutput team token [RawOutput { problemId = onlineProblem args
+                                                          , seed = D.sourceSeeds ri !! seedNo args
+                                                          , tag = T.pack $ ourTag args
+                                                          , solution = cmdsS
+                                                          }
+                                               ]
+          fail "Finished!"
   
-playEvent _ ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
+playEvent _ _ ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
+
+visEvent :: Event -> PlayState -> IO PlayState
+visEvent (EventKey (SpecialKey KeySpace) Down _ _) ((cmd:cmds), st, field, _) = do
+  field' <- case command cmd field of
+    Nothing -> fail "Placement failure!"
+    Just f -> return f
+  print (score field', sourceLength field', cmd)
+  when (isNothing $ unit field') $ do
+    fail "Success!"
+  return (cmds, st, field', fieldPicture $ resultField field')
+visEvent _ ([], _, _, _) = fail "No more commands"
+visEvent ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
 
 playAdvance :: Float -> PlayState -> IO PlayState
 playAdvance _ = return
-
-playFinish :: Arguments -> [Command] -> IO a
-playFinish args cmds = do
-  print cmds
-  let cmdsS = wordify cmds
-  putStrLn cmdsS
-  case inputType args of
-   File -> return ()
-   Online -> do
-     send <- queryUser "Send solution to the server?" False
-     when send $ postOutput team token [RawOutput { problemId = onlineProblem args
-                                                  , seed = seedNo args
-                                                  , tag = T.pack $ ourTag args
-                                                  , solution = cmdsS
-                                                  }
-                                       ]
-  fail "Finished!"
 
 queryUser :: String -> Bool -> IO Bool
 queryUser q def = bracket (hGetBuffering stdout) (hSetBuffering stdout) $ const $ do
@@ -158,12 +172,21 @@ visualize args = do
       let startField = toField inp (seedNo args)
           startState = ([], viewStateInit, startField, fieldPicture $ resultField startField)
 
-      playIO window black 30 startState playShow (playEvent args) playAdvance
+      playIO window black 30 startState playShow (playEvent inp args) playAdvance
 
     (File, Processed) -> do
       inp <- getFile
       let pic = fieldPicture $ processedField inp
       display window black pic
+
+    (File, Solved) -> do
+      [inp] <- getFile
+      problem <- getInput $ problemId inp
+      let startField = toField problem (fromJust $ findIndex (== seed inp) (D.sourceSeeds problem))
+          startState = (dewordify $ solution inp, viewStateInit, startField, fieldPicture $ resultField startField)
+
+      playIO window black 30 startState playShow visEvent playAdvance
+
     _ -> fail "Incompatible combination of input and format"
 
 main :: IO ()
