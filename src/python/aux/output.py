@@ -27,7 +27,7 @@ def output_solution(problem_id, seed, commands, tag=None):
     p = {
         'problemId': problem_id
       , 'seed': seed
-      , 'commands': _fmt_commands(commands)
+      , 'solution': _fmt_commands(commands)
     }
 
     if tag is not None:
