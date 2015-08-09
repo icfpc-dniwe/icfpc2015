@@ -33,7 +33,7 @@ validPaths (Field { unit = Nothing }) = error "validPaths: no unit on the field"
 validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
   where path :: [Command] -> (OldsSet -> Field -> PathTree) -> OldsSet -> Field -> PathTree
         path _ _ _ f@(Field { unit = Just u })
-          | sourceLength f /= sourceLength startf = DeadEnd (members u) (score f - startScore)
+          | sourceLength f /= sourceLength startf = DeadEnd (absCoords u) (score f - startScore)
         path _ _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
         path cmds next olds f@(Field { unit = Just u }) =
           Crossroad $ M.fromList $ mapMaybe (\c -> (c, ) <$> (command c f >>= check)) cmds
@@ -64,8 +64,8 @@ solutions = sols []
         sols cmds (Crossroad ts) = foldr1 M.union $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
 findBest :: Solutions -> (Solution, Float)
-findBest = maximumBy (comparing snd) . map scorify . M.toList
-  where scorify (cells, (sol, int)) = (sol, int)
+findBest = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
+  where scorify cells sol int = int
 
 data Bot = Bot { solution :: Solution
                , unitNum :: Int
@@ -73,16 +73,14 @@ data Bot = Bot { solution :: Solution
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f@(Field { unit = Just u }) = Bot { solution = fst $ findBest $ solutions $ validPaths f
-                                         , unitNum = sourceLength f
-                                         }
-newBot _ = error "newBot: field doesn't have a unit"
+newBot f = Bot { solution = fst $ findBest $ solutions $ validPaths f
+               , unitNum = sourceLength f
+               }
 
 advanceBot :: Field -> Bot -> (Command, Bot)
-advanceBot f@(Field { unit = Just u }) bot = (c, bot' { solution = cmds })
+advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
           | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest $ solutions $ validPaths f
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot
-advanceBot _ _ = error "advanceBot: field doesn't have a unit"

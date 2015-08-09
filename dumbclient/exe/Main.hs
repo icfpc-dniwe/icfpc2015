@@ -106,7 +106,7 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
     return $ s' { bot = bot' }
   _ -> return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
-  where updBot s = return s { bot = newBot (field s) }
+  where updBot ss = return ss { bot = newBot (field ss) }
         doCmd' cmd = do
           field' <- case command cmd $ field s of
                     Nothing -> do
@@ -198,8 +198,8 @@ visualize args = do
 
     (File, Processed) -> do
       inp <- getFile
-      let pic = fieldPicture $ processedField inp
-      display window black pic
+      let pict = fieldPicture $ processedField inp
+      display window black pict
 
     (File, Solved) -> do
       inp' <- getFile
