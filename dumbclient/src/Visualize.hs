@@ -1,6 +1,6 @@
 module Visualize where
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Graphics.Gloss
 import Linear.V2
 import Linear.V3

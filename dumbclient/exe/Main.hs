@@ -1,9 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Monad
-import Control.Exception
-import Data.Char
-import Data.List
 import Data.Maybe
 import System.IO
 import qualified Data.Aeson as J
@@ -22,209 +19,325 @@ import Types
 import qualified ReadWrite as D
 import ReadWrite (RawOutput(..), getInput, postOutput)
 import Field (Field(..), toField, command, resultField)
-import ProcessedField (processedField)
 import Visualize
 import Wordify
 
-data InputType = Online
-               | File
-               deriving (Show, Read, Eq)
+data InputSource = Online
+                 | File
+                 deriving (Show, Read, Eq)
 
 data InputFormat = Standard
-                 | Processed
                  | Solved
                  deriving (Show, Read, Eq)
 
-data Arguments = Arguments { inputType :: InputType
+data OutputMode = Send
+                | Print
+                deriving (Show, Read, Eq)
+
+data Arguments = Arguments { filePaths :: [String]
+                           , timeLimit :: Integer
+                           , memoryLimit :: Integer
+                           , coresNumber :: Integer
+                           , phrases :: [String]
+                           , inputSource :: InputSource
                            , inputFormat :: InputFormat
-                           , onlineProblem :: Integer
-                           , filePath :: String
-                           , seedNo :: Int
-                           , ourTag :: String
+                           , outputMode :: OutputMode
+                           , outputTag :: String
+                           , visualize :: Bool
                            }
                deriving (Show, Eq)
 
 arguments :: Parser Arguments
 arguments = Arguments
-  <$> option auto
+  <$> many (strOption
+  (  short 'f'
+  <> long "file"
+  <> metavar "FILENAME"
+  <> help "Input files"
+  ))
+  <*> option auto
   (  short 't'
-  <> long "type"
-  <> help "Where to take input from"
-  <> value Online
+  <> long "time"
+  <> metavar "NUMBER"
+  <> help "Time limit (0 - no limit)"
+  <> value 0
+  <> showDefault
   )
   <*> option auto
-  (  short 'f'
+  (  short 'm'
+  <> long "memory"
+  <> metavar "NUMBER"
+  <> help "Memory limit (0 - no limit)"
+  <> value 0
+  <> showDefault
+  )
+  <*> option auto
+  (  short 'c'
+  <> long "cores"
+  <> metavar "NUMBER"
+  <> help "Available processor cores (0 - autodetect)"
+  <> value 0
+  <> showDefault
+  )
+  <*> many (strOption
+  (  short 'p'
+  <> long "phrase"
+  <> metavar "STRING"
+  <> help "Phrase of power"
+  ))
+  <*> option auto
+  (  short 's'
+  <> long "source"
+  <> help "Input source"
+  <> value File
+  <> showDefault
+  )
+  <*> option auto
+  (  short 'F'
   <> long "format"
   <> help "Input format"
   <> value Standard
+  <> showDefault
   )
   <*> option auto
-  (  short 'p'
-  <> long "problem"
-  <> help "Problem number"
-  <> value 0
+  (  short 'o'
+  <> long "output"
+  <> help "Output mode"
+  <> value Print
+  <> showDefault
   )
   <*> strOption
-  (  short 'i'
-  <> long "input"
-  <> help "File with input"
-  <> value ""
-  )
-  <*> option auto
-  (  short 's'
-  <> long "seed"
-  <> help "Seed number"
-  <> value 0
-  )
-  <*> strOption
-  (  short 'g'
+  (  short 'T'
   <> long "tag"
   <> help "Tag"
-  <> value "Vis"
+  <> value "dumbclient"
+  <> showDefault
+  )
+  <*> switch
+  (  short 'v'
+  <> long "visualize"
+  <> help "Graphical mode: HJKL to move, UI to rotate"
   )
 
-data PlayState = PlayState { commands :: Solution
-                           , bot :: Bot
-                           , viewState :: ViewState
-                           , field :: Field
-                           , pic :: Picture
+data PlayState = PlayState { commands :: !Solution
+                           , bot :: !Bot
+                           , field :: !Field
+                           , leftFields :: ![Field]
+                           , finishedFields :: ![Solution]
                            }
+               deriving (Show, Eq)
 
-playShow :: PlayState -> IO Picture
+data VisState = VisState { playState :: !PlayState
+                         , viewState :: !ViewState
+                         , pic :: !Picture
+                         }
+
+output :: Arguments -> D.RawInput -> [Solution] -> IO ()
+output args inp outps = do
+  let conv (n, outp) = RawOutput { problemId = D.id inp
+                                 , seed = D.sourceSeeds inp !! n
+                                 , tag = T.pack $ outputTag args
+                                 , solution = wordify outp
+                                 }
+      outps' = map conv $ zip [0..] outps
+  case outputMode args of
+   Print -> BL.putStrLn $ J.encode outps'
+   Send -> do
+     BL.hPutStrLn stderr $ J.encode outps'
+     team <- read <$> getEnv "TEAM_ID"
+     token <- B.pack <$> getEnv "TOKEN"
+     postOutput team token outps'
+
+processState :: Command -> Field -> IO (Maybe Field)
+processState cmd f = case command cmd f of
+  Nothing -> do
+    hPutStrLn stderr "Placement failure!"
+    return Nothing
+  Just field' -> do
+    hPutStrLn stderr $
+      "Score: " ++ show (score field')
+      ++ ", left " ++ show (sourceLength field')
+      ++ ", last command: " ++ show cmd
+    when (isNothing $ unit field') $ hPutStrLn stderr "Success!"
+    return $ Just field'
+
+playShow :: VisState -> IO Picture
 playShow s = return $ applyViewPortToPicture (viewStateViewPort $ viewState s) $ pic s
 
-playEvent :: D.RawInput -> Arguments -> Event -> PlayState -> IO PlayState
+runBot :: D.RawInput -> Arguments -> PlayState -> IO ()
+runBot ri args s = do
+  let (cmd, bot') = advanceBot (field s) (bot s)
+  mfield <- processState cmd $ field s
+  case mfield of
+   Nothing -> finish (reverse $ commands s)
+   Just field' -> do
+     let cmds' = cmd : commands s
+     if isNothing $ unit field'
+       then finish (reverse cmds')
+       else runBot ri args s { field = field'
+                             , commands = cmds'
+                             , bot = bot'
+                             }
+  where finish cmds' = if null (leftFields s)
+                       then output args ri $ finishedFields s ++ [cmds']
+                       else runBot ri args s { commands = []
+                                             , field = head $ leftFields s
+                                             , bot = newBot $ head $ leftFields s
+                                             , finishedFields = finishedFields s ++ [cmds']
+                                             , leftFields = tail $ leftFields s
+                                             }
+
+playEvent :: D.RawInput -> Arguments -> Event -> VisState -> IO VisState
 playEvent ri args ev@(EventKey c Down _ _) s = case c of
-  Char 'h' -> doCmd' (Move W) >>= updBot
-  Char 'j' -> doCmd' (Move SW) >>= updBot
-  Char 'k' -> doCmd' (Move SE) >>= updBot
-  Char 'l' -> doCmd' (Move E) >>= updBot
-  Char 'u' -> doCmd' (Turn CW) >>= updBot
-  Char 'i' -> doCmd' (Turn CCW) >>= updBot
+  Char 'h' -> doCmd (Move W) >>= updBot
+  Char 'j' -> doCmd (Move SW) >>= updBot
+  Char 'k' -> doCmd (Move SE) >>= updBot
+  Char 'l' -> doCmd (Move E) >>= updBot
+  Char 'u' -> doCmd (Turn CW) >>= updBot
+  Char 'i' -> doCmd (Turn CCW) >>= updBot
   SpecialKey KeySpace -> do
-    let (cmd, bot') = advanceBot (field s) (bot s)
-    s' <- doCmd' cmd
-    return $ s' { bot = bot' }
+    let (cmd, bot') = advanceBot (field $ playState s) (bot $ playState s)
+    s' <- doCmd cmd
+    return s' { playState = (playState s') { bot = bot' } }
   _ -> return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
-  where updBot ss = return ss { bot = newBot (field ss) }
-        doCmd' cmd = do
-          field' <- case command cmd $ field s of
-                    Nothing -> do
-                      putStrLn "Placement failure!"
-                      finish (reverse $ commands s)
-                    Just f -> return f
-          print (score field', sourceLength field', cmd)
-          let cmds' = cmd : commands s
-          when (isNothing $ unit field') $ do
-            putStrLn "Success!"
-            finish (reverse cmds')
-          return s { field = field'
-                   , commands = cmds'
-                   , pic = fieldPicture $ resultField field'
-                   }
+  where updBot ss = return ss { playState = (playState ss) { bot = newBot (field $ playState ss) } }
 
-        finish cmds' = do
-          print cmds'
-          let cmdsS = wordify cmds'
-              output = RawOutput { problemId = onlineProblem args
-                                 , seed = D.sourceSeeds ri !! seedNo args
-                                 , tag = T.pack $ ourTag args
-                                 , solution = cmdsS
-                                 }
-          BL.putStrLn $ J.encode output
-          case inputType args of
-           File -> return ()
-           Online -> do
-             send <- queryUser "Send solution to the server?" False
-             when send $ do
-               team <- read <$> getEnv "TEAM_ID"
-               token <- B.pack <$> getEnv "TOKEN"
-               postOutput team token [output]
-          fail "Finished!"
-  
+        doCmd cmd = do
+          mfield <- processState cmd $ field $ playState s
+          case mfield of
+           Nothing -> finish $ reverse $ commands $ playState s
+           Just field' -> do
+             let cmds' = cmd : commands (playState s)
+             if isNothing $ unit field'
+               then finish (reverse cmds')
+               else return s { playState = (playState s) { field = field'
+                                                         , commands = cmds'
+                                                         }
+                             , pic = fieldPicture $ resultField field'
+                             }
+        
+        finish cmds' = if null (leftFields $ playState s)
+                       then do
+                         output args ri $ finishedFields (playState s) ++ [cmds']
+                         fail "Finished!"
+                       else let ps' = (playState s) { commands = []
+                                                    , field = head $ leftFields $ playState s
+                                                    , bot = newBot $ head $ leftFields $ playState s
+                                                    , finishedFields = finishedFields (playState s) ++ [cmds']
+                                                    , leftFields = tail $ leftFields $ playState s
+                                                    }
+                            in return s { playState = ps'
+                                        , pic = fieldPicture $ resultField $ field ps'
+                                        }
+
 playEvent _ _ ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
-visEvent :: Event -> PlayState -> IO PlayState
-visEvent (EventKey (SpecialKey KeySpace) Down _ _) s@(PlayState { commands = cmd:cmds }) = do
-  field' <- case command cmd $ field s of
-    Nothing -> fail "Placement failure!"
-    Just f -> return f
-  print (score field', sourceLength field', cmd)
-  when (isNothing $ unit field') $ do
-    fail "Success!"
-  return s { field = field'
-           , commands = cmds
-           , pic = fieldPicture $ resultField field'
-           }
-visEvent _ (PlayState { commands = [] }) = fail "No more commands"
+visEvent :: Event -> VisState -> IO VisState
+visEvent (EventKey (SpecialKey KeySpace) Down _ _) s = do
+  case commands $ playState s of
+   [] -> do
+     hPutStrLn stderr "No more commands"
+     finish
+   (cmd:cmds) -> do
+     mfield <- processState cmd $ field $ playState s
+     case mfield of
+      Nothing -> do
+        hPutStrLn stderr "Placement failure!"
+        finish
+      Just field' -> do
+        if isNothing $ unit field'
+          then finish
+          else return s { playState = (playState s) { field = field'
+                                                    , commands = cmds
+                                                    }
+                        , pic = fieldPicture $ resultField field'
+                        }
+
+  where finish = if null (leftFields $ playState s)
+                 then fail "Finished!"
+                 else let ps' = (playState s) { commands = head $ finishedFields $ playState s
+                                              , field = head $ leftFields $ playState s
+                                              , bot = newBot $ head $ leftFields $ playState s
+                                              , finishedFields = tail $ finishedFields $ playState s
+                                              , leftFields = tail $ leftFields $ playState s
+                                              }
+                      in return s { playState = ps'
+                                  , pic = fieldPicture $ resultField $ field ps'
+                                  }
+
 visEvent ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
-playAdvance :: Float -> PlayState -> IO PlayState
+playAdvance :: Float -> VisState -> IO VisState
 playAdvance _ = return
 
-queryUser :: String -> Bool -> IO Bool
-queryUser q def = bracket (hGetBuffering stdout) (hSetBuffering stdout) $ const $ do
-  hSetBuffering stdout NoBuffering
-  putStr $ q ++ " (" ++ (if def then "Y" else "y") ++ "/" ++ (if not def then "N" else "n") ++ "): "
-  s <- getLine
-  case map toLower s of
-   "y" -> return True
-   "n" -> return False
-   _ -> return def
-
-visualize :: Arguments -> IO ()
-visualize args = do
+process :: Arguments -> IO ()
+process args = do
   let window = InWindow "Visualizer" (1024, 768) (0, 0)
-      getFile :: J.FromJSON a => IO a
-      getFile = do
-        s <- case filePath args of
-          "-" -> BL.getContents
-          fp -> BL.readFile fp
+
+      getFile :: J.FromJSON a => String -> IO a
+      getFile fp = do
+        s <- BL.readFile fp
         case J.decode s of
          Nothing -> fail "Failed to decode JSON from file"
-         Just i -> return i
+         Just r -> return r
 
-  case (inputType args, inputFormat args) of
-    (from, Standard) -> do
-      inp <- case from of
-        Online -> getInput $ onlineProblem args
-        File -> getFile
-      let startField = toField inp (seedNo args)
-          startState = PlayState { commands = []
-                                 , viewState = viewStateInit
-                                 , field = startField
+      getRInput :: String -> IO D.RawInput
+      getRInput fp = case inputSource args of
+        Online -> getInput $ read fp
+        File -> getFile fp
+
+  case inputFormat args of
+   Standard -> do
+     -- TODO: fix
+     [inp] <- mapM getRInput (filePaths args)
+     let startField = toField inp 0
+         startPState = PlayState { commands = []
                                  , bot = newBot startField
-                                 , pic = fieldPicture $ resultField startField
-                                 }
-
-      playIO window black 30 startState playShow (playEvent inp args) playAdvance
-
-    (File, Processed) -> do
-      inp <- getFile
-      let pict = fieldPicture $ processedField inp
-      display window black pict
-
-    (File, Solved) -> do
-      inp' <- getFile
-      let inp = inp' !! seedNo args
-      problem <- getInput $ problemId inp
-      let startField = toField problem (fromJust $ findIndex (== seed inp) (D.sourceSeeds problem))
-          startState = PlayState { commands = dewordify $ solution inp
-                                 , viewState = viewStateInit
                                  , field = startField
-                                 , bot = error "bot undefined for solution visualizations"
-                                 , pic = fieldPicture $ resultField startField
+                                 , leftFields = map (toField inp) [1..length (D.sourceSeeds inp) - 1]
+                                 , finishedFields = []
                                  }
+         startState = VisState { playState = startPState
+                               , viewState = viewStateInit
+                               , pic = fieldPicture $ resultField startField
+                               }
+     if visualize args
+       then playIO window black 30 startState playShow (playEvent inp args) playAdvance
+       else runBot inp args startPState
 
-      playIO window black 30 startState playShow visEvent playAdvance
+   Solved -> undefined
+     --  [inp] <- head <$> mapM getFile (filePaths args)
+     --  problem <- getInput $ problemId inp
+     --  let startField = toField inp 0
+     --      startPState = PlayState { commands = dewordify $ solution inp
+     --                              , bot = newBot startField
+     --                              , field = startField
+     --                              , leftFields = [1..length (sourceSeeds inp)]
+     --                              , finishedFields = []
+     --                              }
+     --     startState = VisState { playState = startPState
+     --                           , viewState = viewStateInit
+     --                           , pic = fieldPicture $ resultField startField
+     --                           }
+     -- if visualize args
+     --   then playIO window black 30 startState playShow (playEvent inp args) playAdvance
+     --   else runBot startPState
+     --  let inp = inp' !! seedNo args
+     --  let startField = 
+     --      startState = PlayState { commands = 
+     --                             , viewState = viewStateInit
+     --                             , field = startField
+     --                             , bot = error "bot undefined for solution visualizations"
+     --                             , pic = fieldPicture $ resultField startField
+     --                             }
 
-    _ -> fail "Incompatible combination of input and format"
+     --  playIO window black 30 startState playShow visEvent playAdvance
 
 main :: IO ()
-main = execParser opts >>= visualize
+main = execParser opts >>= process
   where
     opts = info (helper <*> arguments)
       (  fullDesc
-      <> progDesc "Visualize ICFPC 2015 maps: HJKL to move, UI to rotate."
+      <> progDesc "ICFPC 2015 bot and visualizer."
       )

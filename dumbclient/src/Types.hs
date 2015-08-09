@@ -4,7 +4,7 @@
 module Types where
 
 import Control.Monad
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 import qualified Data.Vector as V
 import Data.Aeson
 import Linear.V2
@@ -55,10 +55,11 @@ instance Enum Command where
 
 type CColor = V3 Float
 
-data Visualized = Visualized { visFilled :: Map Cell CColor
-                             , visWidth :: Int
-                             , visHeight :: Int
+data Visualized = Visualized { visFilled :: !(Map Cell CColor)
+                             , visWidth :: !Int
+                             , visHeight :: !Int
                              }
+                deriving (Show, Eq)
 
 cell :: Iso (V2 a) (V2 b) (a, a) (b, b)
 cell = iso (\(V2 x y) -> (x, y)) (\(x, y) -> V2 x y)
