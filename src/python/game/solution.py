@@ -11,7 +11,7 @@ from common.rng import next_number
 
 def get_solution(problem, seed, phrase):
     commands = []
-    max_depth = 10
+    max_depth = 5
     tree = nx.DiGraph()
     tree.add_node(1)
     tree.node[1]['board'] = problem.board
@@ -23,13 +23,15 @@ def get_solution(problem, seed, phrase):
     generate_tree(problem.units, max_depth, tree, root_node)
     while len(tree.neighbors(root_node)) > 0:
         score, move_to = best_move(tree, root_node)
+        #print('Score:', score)
+        #print('Directions:', tree.node[move_to]['directions'][:4])
         root_node = move_to
         commands += tree.node[move_to]['directions']
         generate_tree(problem.units, max_depth, tree, root_node)
     return commands
 
 
-def generate_moves(board, unit):
+def generate_moves(board, unit, last_move=None):
     seq = [[], [], [], []]
     seq[0] = [Move.E, Move.SW, Move.W, Move.SE]
     seq[1] = [Move.W, Move.SE, Move.E, Move.SW]
@@ -41,6 +43,8 @@ def generate_moves(board, unit):
         cur = 0
         direc = []
         [cur_u.shift(Move.E) for _ in range(shift)]
+        if last_move is not None:
+            cur_u.move(last_move)
         while not board.is_locked(cur_u.cells):
             cur_u.move(s[cur])
             direc += [s[cur]]
@@ -68,10 +72,15 @@ def generate_tree(unit_list, depth, tree, node):
         board = tree.node[node]['board']
         unit = unit_list[tree.node[node]['unit_idx']]
         r_num = tree.node[node]['r_num']
-        for move in generate_moves(board, unit):
+        if (len(tree.node[node]['directions'])) > 0:
+            last_move = tree.node[node]['directions'][-1]
+        else:
+            last_move = None
+        for move in generate_moves(board, unit, last_move):
             #if move is None:
             #    continue
-            #print('  Creating move idx', idx)
+            #print('  Creating move with dir:', len(move[1]), move[1][:4])
+            #input('Press ENTER to continue...')
             size = unit.cells.shape[0]
             next_board = deepcopy(board)
             lines = next_board.add_cells(move[0].cells)
