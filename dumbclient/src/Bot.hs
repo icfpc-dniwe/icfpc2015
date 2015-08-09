@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Linear.V2
+import Linear.V3
 import Debug.Trace
 
 import Types
@@ -65,7 +66,9 @@ solutions = sols []
 
 findBest :: HCells -> Solutions -> (Solution, Float)
 findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
-  where scorify cells sol scor = scor + fromIntegral (sum $ map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList cells)
+  where scorify cells sol scor = a1 * scor +  a2 * fromIntegral (sum $ map (\(V3 _ _ z) -> z) $ S.toList cells)
+        a1 = 0.1
+        a2 = 1.0
 
 data Bot = Bot { solution :: Solution
                , unitNum :: Int
