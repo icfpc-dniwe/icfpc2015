@@ -12,5 +12,5 @@ data SolTree = DeadEnd Cell
 
 validSolutions :: Field -> SolTree
 validSolutions = path []
-  where path olds (Field { unit = Nothing }) = DeadEnd
+  where path olds (Field { unit = Nothing }) = DeadEnd undefined
         path olds f@(Field { unit = Just u }) = undefined
