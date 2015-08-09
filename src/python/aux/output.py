@@ -25,7 +25,7 @@ def _fmt_commands(commands):
 
 def output_solution(problem_id, seed, commands, tag=None):
     p = {
-        'problem_id': problem_id
+        'problemId': problem_id
       , 'seed': seed
       , 'commands': _fmt_commands(commands)
     }
