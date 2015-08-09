@@ -67,13 +67,16 @@ solutions = sols []
 findBest :: HCells -> Solutions -> (Solution, Float)
 findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
   where scorify cells sol scor = a1 * scor + 
-          a2 * low + 
-          a3 * bump
-        low = fromIntegral (sum $ map (\(V3 _ _ z) -> z) $ S.toList cells)
-        bump = sum (map (\c -> if S.null $ neighbors c S.\\ cells then 1 else 0) $ S.toList cells)
-        a1 = 0.1
+          a2 * low cells + 
+          a3 * whole +
+          a4 * bump
+        low cells = fromIntegral (sum $ map (\(V3 _ _ z) -> z) $ S.toList cells)
+        whole = sum (map (\c -> if S.null $ neighbors c S.\\ filled then 1 else 0) $ S.toList filled)
+        bump = 0
+        a1 = 0.02
         a2 = 1.0
-        a3 = -1.5
+        a3 = 2.0
+        a4 = -5.0
 
 data Bot = Bot { solution :: Solution
                , unitNum :: Int
