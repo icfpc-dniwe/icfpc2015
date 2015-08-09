@@ -61,11 +61,8 @@ def parse_problem(json_string):
 
     width = p['width']
     height = p['height']
-    board = Board(width, height)
-
     filled = list(map(_parse_cell, p['filled']))
-    board.add_cells(filled)
-
+    board = Board(width, height, filled)
 
     units = list(map(_parse_unit, p['units']))
 

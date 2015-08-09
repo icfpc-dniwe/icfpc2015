@@ -2,16 +2,30 @@
 
 from copy import deepcopy
 import networkx as nx
-#from networkx.algorithms.traversal.depth_first_search import dfs_succesors
+from networkx.algorithms.traversal.depth_first_search import dfs_tree
 
 from common.constants import *
 from common.tools import get_score
 from common.rng import next_number
 
-# TODO Move and Rotate, not ascii characters!
+
 def get_solution(problem, seed, phrase):
     commands = []
-    depth = 4
+    max_depth = 10
+    tree = nx.DiGraph()
+    tree.add_node(1)
+    tree.node[1]['board'] = problem.board
+    tree.node[1]['score'] = 0
+    tree.node[1]['unit_idx'] = seed % len(problem.units)
+    tree.node[1]['r_num'] = seed
+    tree.node[1]['directions'] = []
+    root_node = 1
+    generate_tree(problem.units, max_depth, tree, root_node)
+    while len(tree.neighbors(root_node)) > 0:
+        score, move_to = best_move(tree, root_node)
+        root_node = move_to
+        commands += tree.node[move_to]['directions']
+        generate_tree(problem.units, max_depth, tree, root_node)
     return commands
 
 
@@ -34,7 +48,7 @@ def generate_moves(board, unit):
             if cur >= len(s):
                 cur = 0
         if len(direc) <= 0:
-            yield None
+            continue
         else:
             cur_u.undo_move(s[cur])
             yield (cur_u, direc)
@@ -54,9 +68,9 @@ def generate_tree(unit_list, depth, tree, node):
         board = tree.node[node]['board']
         unit = unit_list[tree.node[node]['unit_idx']]
         r_num = tree.node[node]['r_num']
-        for idx, move in enumerate(generate_moves(board, unit)):
-            if move is None:
-                continue
+        for move in generate_moves(board, unit):
+            #if move is None:
+            #    continue
             #print('  Creating move idx', idx)
             size = unit.cells.shape[0]
             next_board = deepcopy(board)
@@ -71,6 +85,19 @@ def generate_tree(unit_list, depth, tree, node):
             tree.node[next_node]['score'] = score + cur_score
             tree.node[next_node]['directions'] = move[1]
             generate_tree(unit_list, depth - 1, tree, next_node)
+
+
+def best_move(tree, node):
+    if len(tree.neighbors(node)) == 0:
+        return tree.node[node]['score'], node
+    max_score = -10000
+    max_move = None
+    for move_to in tree.neighbors_iter(node):
+        score, _ = best_move(tree, move_to)
+        if score > max_score:
+            max_score = score
+            max_move = move_to
+    return max_score, max_move
 
 
 # TODO
