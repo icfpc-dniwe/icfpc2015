@@ -19,7 +19,7 @@ def _fmt_commands(commands):
             return 'd'
         elif x == Rotate.CCW:
             return 'k'
-
+    print(commands)
     return ''.join(list(map(process, commands)))
             
 
@@ -33,4 +33,8 @@ def output_solution(problem_id, seed, commands, tag=None):
     if tag is not None:
         p['tag'] = tag
 
-    return json.dumps(p)
+    return p
+
+
+def combine_solutions(solutions):
+    return json.dumps(solutions)

@@ -13,7 +13,7 @@ def upload_solution(json_string):
   token = "53/b8w5nkWTgqhWm00puFJMoBk3NPMMs3TAPAD8eSU0="
   team = 180
 
-  url = "https://davar.icfpcontest.org/teams/{team}/solutions".format(team=TEAM)
+  url = "https://davar.icfpcontest.org/teams/{team}/solutions".format(team=team)
   headers = { 'Content-Type': 'application/json' }
   auth = HTTPBasicAuth('', token)
 
