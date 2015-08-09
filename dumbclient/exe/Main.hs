@@ -70,7 +70,7 @@ arguments = Arguments
   <> value 0
   )
 
-type PlayState = ([Command], ViewState, Field, Picture)
+type PlayState = (Solution, ViewState, Field, Picture)
 
 playShow :: PlayState -> IO Picture
 playShow (_, st, _, pic) = return $ applyViewPortToPicture (viewStateViewPort st) $ pic
@@ -89,7 +89,7 @@ playEvent args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c o
           field' <- case command cmd field of
                     Nothing -> do
                       putStrLn "Placement failure!"
-                      playFinish args cmds
+                      playFinish args (reverse cmds)
                     Just f -> return f
           print (score field', sourceLength field', cmd)
           let cmds' = cmd : cmds

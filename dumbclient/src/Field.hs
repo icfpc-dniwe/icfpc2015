@@ -132,7 +132,7 @@ resultField field = Visualized { visFilled = pts
         cells = case unit field of
                  Just u -> M.fromList $ map (convCell $ center u) $ S.toList $ members u
                  Nothing -> M.empty
-        convCell cc = (, cellCol) . (+ hcellToCell cc) . hcellToCell
+        convCell cc = (, cellCol) . hcellToCell . (+ cc)
         pts = built `M.union` cells
 
 move :: HUnit -> Direction -> HUnit

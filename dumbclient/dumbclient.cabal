@@ -21,6 +21,7 @@ library
                      , LCG
                      , ReadWrite
                      , Types
+                     , Bot
                      , Visualize
                      , Wordify
   -- other-modules:       

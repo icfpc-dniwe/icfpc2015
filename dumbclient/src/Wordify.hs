@@ -20,7 +20,7 @@ maps = M.fromList $ map (second S.fromList) list
                , (Turn CCW, "kstuwx")
                ]
 
-powerWords :: Map [Command] String
+powerWords :: Map Solution String
 powerWords = M.fromList $ map (\s -> (map conv s, s)) list
   where conv c = fst $ fromJust $ find (S.member c . snd) $ M.toList maps
         list = [ "ea!"
@@ -29,5 +29,5 @@ powerWords = M.fromList $ map (\s -> (map conv s, s)) list
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b
 findMaybe f = listToMaybe . mapMaybe f
 
-wordify :: [Command] -> String
+wordify :: Solution -> String
 wordify = map (S.findMin . (maps M.!))

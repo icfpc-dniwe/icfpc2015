@@ -51,3 +51,5 @@ data Visualized = Visualized { visFilled :: Map Cell CColor
 
 cell :: Iso (V2 a) (V2 b) (a, a) (b, b)
 cell = iso (\(V2 x y) -> (x, y)) (\(x, y) -> V2 x y)
+
+type Solution = [Command]
