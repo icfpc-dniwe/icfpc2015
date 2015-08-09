@@ -15,8 +15,8 @@ import Debug.Trace
 import Types
 import Field
 
-data PathTree = DeadEnd HCells Float
-             | Crossroad (Map Command PathTree)
+data PathTree = DeadEnd !HCells !Float
+             | Crossroad !(Map Command PathTree)
              deriving (Show, Eq)
 
 mergeSol :: PathTree -> PathTree -> PathTree
@@ -65,7 +65,7 @@ solutions = sols []
 
 findBest :: Solutions -> (Solution, Float)
 findBest = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
-  where scorify cells sol int = int
+  where scorify cells sol scor = scor + fromIntegral (sum $ map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList cells)
 
 data Bot = Bot { solution :: Solution
                , unitNum :: Int
