@@ -166,3 +166,13 @@ command cmd f@(Field { unit = Just u })
                   Turn r -> rotate u r
                }
 command _ f@(Field { unit = Nothing }) = Just f
+
+
+neighbors :: HCell -> Set HCell
+neighbors c = S.fromList [c + sNW, c + sNE, c + sE, c + sSE, c + sSW, c + sW]
+  where sNW = V3 0 1 (-1)
+        sNE = V3 1 0 (-1)
+        sE  = V3 1 (-1) 0
+        sSE = V3 0 (-1) 1
+        sSW = V3 (-1) 0 1
+        sW  = V3 (-1) 1 0
