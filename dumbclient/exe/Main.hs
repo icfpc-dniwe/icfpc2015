@@ -98,7 +98,7 @@ playEvent ri args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case 
   _ -> return (cmds, updateViewStateWithEvent ev st, field, pic)
 
   where doCmd' cmd = do
-          print $ validSolutionsSimple field
+          print $ solLength $ validSolutionsSimple field
           field' <- case command cmd field of
                     Nothing -> do
                       putStrLn "Placement failure!"
