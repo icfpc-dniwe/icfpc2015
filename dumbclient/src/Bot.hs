@@ -2,6 +2,8 @@
 
 module Bot where
 
+import Data.List
+import Data.Ord
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -12,28 +14,27 @@ import Linear.V2
 import Types
 import Field
 
-data SolTree = DeadEnd
-             | Crossroad (Map Command SolTree)
+data PathTree = DeadEnd HCells Float
+             | Crossroad (Map Command PathTree)
              deriving (Show, Eq)
 
-mergeSol :: SolTree -> SolTree -> SolTree
-mergeSol DeadEnd DeadEnd = DeadEnd
-mergeSol (Crossroad a) DeadEnd = Crossroad a
-mergeSol DeadEnd (Crossroad b) = Crossroad b
+mergeSol :: PathTree -> PathTree -> PathTree
+mergeSol a@(DeadEnd _ _) (DeadEnd _ _) = a
+mergeSol a@(Crossroad _) (DeadEnd _ _) = a
+mergeSol (DeadEnd _ _) b@(Crossroad _) = b
 mergeSol (Crossroad a) (Crossroad b) = Crossroad (a `M.union` b)
 
-solLength :: SolTree -> Int
-solLength DeadEnd = 1
-solLength (Crossroad m) = sum $ map solLength $ M.elems m
+type OldsSet = Set HCells
 
-type OldsSet = Set (Set HCell)
+type Solutions = Map HCells (Solution, Float)
 
-validSolutionsSimple :: Field -> SolTree
-validSolutionsSimple (Field { unit = Nothing }) = DeadEnd
-validSolutionsSimple startf@(Field { unit = Just startu }) = myPath S.empty startf
-  where path :: [Command] -> (OldsSet -> Field -> SolTree) -> OldsSet -> Field -> SolTree
-        path _ _ _ f | sourceLength f /= sourceLength startf = DeadEnd
-        path _ _ _ (Field { unit = Nothing }) = DeadEnd
+validPaths :: Field -> PathTree
+validPaths (Field { unit = Nothing }) = error "validPaths: no unit on the field"
+validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
+  where path :: [Command] -> (OldsSet -> Field -> PathTree) -> OldsSet -> Field -> PathTree
+        path _ _ _ f@(Field { unit = Just u })
+          | sourceLength f /= sourceLength startf = DeadEnd (members u) (score f - startScore)
+        path _ _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
         path cmds next olds f@(Field { unit = Just u }) =
           Crossroad $ M.fromList $ mapMaybe (\c -> (c, ) <$> (command c f >>= check)) cmds
 
@@ -41,10 +42,12 @@ validSolutionsSimple startf@(Field { unit = Just startu }) = myPath S.empty star
                 check f'@(Field { unit = Just u' })
                   | absCoords u' `S.member` olds' = Nothing
                   | otherwise = Just $ next olds' f'
-                check (Field { unit = Nothing }) = Just DeadEnd
+                check (Field { unit = Nothing }) = Just $ DeadEnd S.empty 0
 
         cheight = maximum ys - minimum ys
           where ys = map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList $ members startu
+        startScore = score startf
+        
         tryOr cmds next olds f = mergeSol (path cmds (tryOr cmds next) olds f) (next olds f)
 
         dropAll = path [Move SW, Move SE] dropAll
@@ -54,3 +57,32 @@ validSolutionsSimple startf@(Field { unit = Just startu }) = myPath S.empty star
         moveH = tryOr [Move W, Move E]
 
         myPath = moveH $ dropSome cheight $ turn $ dropAll
+
+solutions :: PathTree -> Solutions
+solutions = sols []
+  where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
+        sols cmds (Crossroad ts) = foldr1 M.union $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
+
+findBest :: Solutions -> (Solution, Float)
+findBest = maximumBy (comparing snd) . map scorify . M.toList
+  where scorify (cells, (sol, int)) = (sol, int)
+
+data Bot = Bot { solution :: Solution
+               , unitNum :: Int
+               }
+         deriving (Show, Eq)
+
+newBot :: Field -> Bot
+newBot f@(Field { unit = Just u }) = Bot { solution = fst $ findBest $ solutions $ validPaths f
+                                         , unitNum = sourceLength f
+                                         }
+newBot _ = error "newBot: field doesn't have a unit"
+
+advanceBot :: Field -> Bot -> (Command, Bot)
+advanceBot f@(Field { unit = Just u }) bot = (c, bot' { solution = cmds })
+  where bot'@(Bot { solution = c:cmds })
+          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest $ solutions $ validPaths f
+                                               , unitNum = sourceLength f
+                                               }
+          | otherwise = bot
+advanceBot _ _ = error "advanceBot: field doesn't have a unit"

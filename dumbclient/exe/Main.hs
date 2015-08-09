@@ -16,7 +16,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Data.ViewState hiding (Command)
 
-import Bot
+import Bot hiding (solution)
 import Types
 import qualified ReadWrite as D
 import ReadWrite (RawOutput(..), getInput, postOutput)
@@ -82,34 +82,46 @@ arguments = Arguments
   <> value "Vis"
   )
 
-type PlayState = (Solution, ViewState, Field, Picture)
+data PlayState = PlayState { commands :: Solution
+                           , bot :: Bot
+                           , viewState :: ViewState
+                           , field :: Field
+                           , pic :: Picture
+                           }
 
 playShow :: PlayState -> IO Picture
-playShow (_, st, _, pic) = return $ applyViewPortToPicture (viewStateViewPort st) $ pic
+playShow s = return $ applyViewPortToPicture (viewStateViewPort $ viewState s) $ pic s
 
 playEvent :: D.RawInput -> Arguments -> Event -> PlayState -> IO PlayState
-playEvent ri args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c of
-  'h' -> doCmd' (Move W)
-  'j' -> doCmd' (Move SW)
-  'k' -> doCmd' (Move SE)
-  'l' -> doCmd' (Move E)
-  'u' -> doCmd' (Turn CW)
-  'i' -> doCmd' (Turn CCW)
-  _ -> return (cmds, updateViewStateWithEvent ev st, field, pic)
+playEvent ri args ev@(EventKey c Down _ _) s = case c of
+  Char 'h' -> doCmd' (Move W) >>= updBot
+  Char 'j' -> doCmd' (Move SW) >>= updBot
+  Char 'k' -> doCmd' (Move SE) >>= updBot
+  Char 'l' -> doCmd' (Move E) >>= updBot
+  Char 'u' -> doCmd' (Turn CW) >>= updBot
+  Char 'i' -> doCmd' (Turn CCW) >>= updBot
+  SpecialKey KeySpace -> do
+    let (cmd, bot') = advanceBot (field s) (bot s)
+    s' <- doCmd' cmd
+    return $ s' { bot = bot' }
+  _ -> return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
-  where doCmd' cmd = do
-          print $ solLength $ validSolutionsSimple field
-          field' <- case command cmd field of
+  where updBot s = return s { bot = newBot (field s) }
+        doCmd' cmd = do
+          field' <- case command cmd $ field s of
                     Nothing -> do
                       putStrLn "Placement failure!"
-                      finish (reverse cmds)
+                      finish (reverse $ commands s)
                     Just f -> return f
           print (score field', sourceLength field', cmd)
-          let cmds' = cmd : cmds
+          let cmds' = cmd : commands s
           when (isNothing $ unit field') $ do
             putStrLn "Success!"
             finish (reverse cmds')
-          return (cmds', st, field', fieldPicture $ resultField field')
+          return s { field = field'
+                   , commands = cmds'
+                   , pic = fieldPicture $ resultField field'
+                   }
 
         finish cmds' = do
           print cmds'
@@ -127,19 +139,22 @@ playEvent ri args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case 
                                                ]
           fail "Finished!"
   
-playEvent _ _ ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
+playEvent _ _ ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
 visEvent :: Event -> PlayState -> IO PlayState
-visEvent (EventKey (SpecialKey KeySpace) Down _ _) ((cmd:cmds), st, field, _) = do
-  field' <- case command cmd field of
+visEvent (EventKey (SpecialKey KeySpace) Down _ _) s@(PlayState { commands = cmd:cmds }) = do
+  field' <- case command cmd $ field s of
     Nothing -> fail "Placement failure!"
     Just f -> return f
   print (score field', sourceLength field', cmd)
   when (isNothing $ unit field') $ do
     fail "Success!"
-  return (cmds, st, field', fieldPicture $ resultField field')
-visEvent _ ([], _, _, _) = fail "No more commands"
-visEvent ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
+  return s { field = field'
+           , commands = cmds
+           , pic = fieldPicture $ resultField field'
+           }
+visEvent _ (PlayState { commands = [] }) = fail "No more commands"
+visEvent ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
 playAdvance :: Float -> PlayState -> IO PlayState
 playAdvance _ = return
@@ -172,7 +187,12 @@ visualize args = do
         Online -> getInput $ onlineProblem args
         File -> getFile
       let startField = toField inp (seedNo args)
-          startState = ([], viewStateInit, startField, fieldPicture $ resultField startField)
+          startState = PlayState { commands = []
+                                 , viewState = viewStateInit
+                                 , field = startField
+                                 , bot = newBot startField
+                                 , pic = fieldPicture $ resultField startField
+                                 }
 
       playIO window black 30 startState playShow (playEvent inp args) playAdvance
 
@@ -186,7 +206,12 @@ visualize args = do
       let inp = inp' !! seedNo args
       problem <- getInput $ problemId inp
       let startField = toField problem (fromJust $ findIndex (== seed inp) (D.sourceSeeds problem))
-          startState = (dewordify $ solution inp, viewStateInit, startField, fieldPicture $ resultField startField)
+          startState = PlayState { commands = dewordify $ solution inp
+                                 , viewState = viewStateInit
+                                 , field = startField
+                                 , bot = error "bot undefined for solution visualizations"
+                                 , pic = fieldPicture $ resultField startField
+                                 }
 
       playIO window black 30 startState playShow visEvent playAdvance
 

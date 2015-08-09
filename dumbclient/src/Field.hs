@@ -22,12 +22,14 @@ cellToHCell (V2 x y) = V3 xx (-xx - y) y
 hcellToCell :: HCell -> Cell
 hcellToCell (V3 x _ z) = V2 (x + (z - z `mod` 2) `div` 2) z
 
+type HCells = Set HCell
+
 data HUnit = HUnit { center :: HCell
-                   , members :: Set HCell
+                   , members :: HCells
                    }
            deriving (Show, Eq)
 
-data Field = Field { filled :: Set HCell
+data Field = Field { filled :: HCells
                    , width :: Int
                    , height :: Int
                    , unit :: Maybe HUnit
@@ -41,7 +43,7 @@ data Field = Field { filled :: Set HCell
 
 -- TODO: more things in cubic coordinates
 
-absCoords :: HUnit -> Set HCell
+absCoords :: HUnit -> HCells
 absCoords u = S.map (+ center u) $ members u
 
 validate :: Field -> Bool
@@ -51,7 +53,7 @@ validate f@(Field { unit = Just u }) = distinct && borders
         borders = all (\(V2 x y) -> x >= 0 && x < width f && y >= 0 && y < height f) $ map hcellToCell $ S.toList cells
 validate (Field { unit = Nothing }) = True
 
-unitPlace :: Set HCell -> Int -> HCell
+unitPlace :: HCells -> Int -> HCell
 unitPlace u w = cellToHCell $ V2 (c - left) (-top)
   where border = map hcellToCell $ S.toList u
         left = minimum $ map (\(V2 x _) -> x) border
