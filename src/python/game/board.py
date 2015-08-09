@@ -23,12 +23,22 @@ class Board:
     
     
     def check_bounds(self, points):
-        return (any(points[:, 2] < 0) or  # top
-                any(points[:, 0] >= self.width - (points[:, 2] // 2)) or  # right x
-                any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)) or  # right y
-                any(points[:, 2] >= height) or  # bottom
-                any(points[:, 0] < -(points[:, 2] // 2)) or  # left x
-                any(points[:, 0] < -((points[:, 2] + 1) // 2))) # left y
+        points2d = hex2points(points)
+        return ((points2d < 0).any() or 
+                any(points2d[:, 0] >= self.width) or 
+                any(points2d[:, 1] >= self.height))
+        #~ print(any(points[:, 2] < 0))
+        #~ print(any(points[:, 0] >= self.width - (points[:, 2] // 2)))
+        #~ print(any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)))
+        #~ print(any(points[:, 2] >= self.height))
+        #~ print(any(points[:, 0] < -(points[:, 2] // 2)))
+        #~ print(any(points[:, 0] < -((points[:, 2] + 1) // 2)))
+        #~ return (any(points[:, 2] < 0) or  # top
+                #~ any(points[:, 0] >= self.width - (points[:, 2] // 2)) or  # right x
+                #~ any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)) or  # right y
+                #~ any(points[:, 2] >= self.height) or  # bottom
+                #~ any(points[:, 0] < -(points[:, 2] // 2)) or  # left x
+                #~ any(points[:, 0] < -((points[:, 2] + 1) // 2))) # left y
     
     
     def add_cells(self, points):

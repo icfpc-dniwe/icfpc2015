@@ -43,4 +43,4 @@ def hex2points(p_hex):
 
 
 def get_score(size, lines):
-    return size + 100 * (1 + ls) * ls / 2
+    return size + 100 * (1 + lines) * lines / 2
