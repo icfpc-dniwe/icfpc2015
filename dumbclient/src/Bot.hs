@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Linear.V2
+import Debug.Trace
 
 import Types
 import Field
@@ -20,9 +21,8 @@ data PathTree = DeadEnd HCells Float
 
 mergeSol :: PathTree -> PathTree -> PathTree
 mergeSol a@(DeadEnd _ _) (DeadEnd _ _) = a
-mergeSol a@(Crossroad _) (DeadEnd _ _) = a
-mergeSol (DeadEnd _ _) b@(Crossroad _) = b
 mergeSol (Crossroad a) (Crossroad b) = Crossroad (a `M.union` b)
+mergeSol _ _ = error "mergeSol: impossible!"
 
 type OldsSet = Set HCells
 
@@ -32,17 +32,16 @@ validPaths :: Field -> PathTree
 validPaths (Field { unit = Nothing }) = error "validPaths: no unit on the field"
 validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
   where path :: [Command] -> (OldsSet -> Field -> PathTree) -> OldsSet -> Field -> PathTree
-        path _ _ _ f@(Field { unit = Just u })
-          | sourceLength f /= sourceLength startf = DeadEnd (absCoords u) (score f - startScore)
         path _ _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
         path cmds next olds f@(Field { unit = Just u }) =
           Crossroad $ M.fromList $ mapMaybe (\c -> (c, ) <$> (command c f >>= check)) cmds
 
           where olds' = S.insert (absCoords u) olds
                 check f'@(Field { unit = Just u' })
+                  | sourceLength f' /= sourceLength startf = Just $ DeadEnd (absCoords u) (score f' - startScore)
                   | absCoords u' `S.member` olds' = Nothing
                   | otherwise = Just $ next olds' f'
-                check (Field { unit = Nothing }) = Just $ DeadEnd S.empty 0
+                check f'@(Field { unit = Nothing }) = Just $ DeadEnd (absCoords u) (score f' - startScore)
 
         cheight = maximum ys - minimum ys
           where ys = map ((\(V2 _ y) -> y) . hcellToCell) $ S.toList $ members startu
@@ -57,11 +56,12 @@ validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
         moveH = tryOr [Move W, Move E]
 
         myPath = moveH $ dropSome cheight $ turn $ dropAll
+        --myPath = dropAll
 
 solutions :: PathTree -> Solutions
 solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
-        sols cmds (Crossroad ts) = foldr1 M.union $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
+        sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
 findBest :: Solutions -> (Solution, Float)
 findBest = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
