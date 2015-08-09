@@ -15,12 +15,13 @@ def get_solution(problem, seed, phrase):
     '''
     commands = []
     max_depth = 1 # maximum depth of tree-search
+    new_seed, number = next_number(seed)
     tree = nx.DiGraph()
     tree.add_node(1)
     tree.node[1]['board'] = problem.board
     tree.node[1]['score'] = 0
-    tree.node[1]['unit_idx'] = seed % len(problem.units)
-    tree.node[1]['r_num'] = seed
+    tree.node[1]['unit_idx'] = number % len(problem.units)
+    tree.node[1]['r_num'] = new_seed
     tree.node[1]['directions'] = []
     root_node = 1
     # generate tree
@@ -63,7 +64,10 @@ def generate_moves(board, unit, last_move=None):
         if len(direc) <= 0:
             continue
         else:
-            #cur_u.undo_move(s[cur])
+            cur -= 1
+            if cur < 0:
+                cur = len(s) - 1
+            cur_u.undo_move(s[cur])
             yield (cur_u, direc)
     #return moves
 
@@ -100,6 +104,7 @@ def generate_tree(unit_list, depth, tree, node):
             size = unit.cells.shape[0]
             next_board = deepcopy(board)
             lines = next_board.add_cells(move[0].cells)
+            #print('F:', hex2points(next_board.filled))
             score = get_score(size, lines)
             # generating new random number for next unit
             nr_num, nunit_idx = next_number(r_num)

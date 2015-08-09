@@ -46,16 +46,10 @@ class Board:
     
     
     def check_bounds(self, points):
-        '''
-        return (any(points[:, 2] < 0) or  # top
-                any(points[:, 0] >= self.width - (points[:, 2] // 2)) or  # right x
-                any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)) or  # right y
-                any(points[:, 2] >= height) or  # bottom
-                any(points[:, 0] < -(points[:, 2] // 2)) or  # left x
-                any(points[:, 0] < -((points[:, 2] + 1) // 2))) # left y
-        '''
-        pts = hex2points(points)
-        return not all(map(lambda p: (p[0] < self.width) and (p[0] >= 0) and (p[1] < self.height) and (p[1] >= 0), pts))
+        points2d = hex2points(points)
+        return ((points2d < 0).any() or 
+                any(points2d[:, 0] >= self.width) or 
+                any(points2d[:, 1] >= self.height))
     
     def add_cells(self, points):
         '''
@@ -70,8 +64,10 @@ class Board:
         '''
         Return 1 if points cannot be placed on board
         '''
-        return self.check_bounds(points) or \
-          any([(points == cell).any() for cell in self.filled])
+        filled_set = set([tuple(x) for x in self.filled])
+        points_set = set([tuple(x) for x in points])
+        return (self.check_bounds(points) or 
+          len(filled_set.intersection(points_set)) > 0)
     
     
     def shift_down(self, height):
