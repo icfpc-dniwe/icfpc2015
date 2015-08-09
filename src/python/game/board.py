@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from common.tools import points2hex
+from common.tools import points2hex, hex2points
 
 class Board:
     def __init__(self, width, height, filled=[]):
@@ -14,7 +14,12 @@ class Board:
             self.filled = np.zeros((0, 3), dtype='int32')
         else:
             self.filled = points2hex(filled)
-        #self._rows = {}
+    
+    
+    def get_start_shift(self, points):
+        points2d = hex2points(points)
+        unit_width = points2d[:, 0].max() + 1
+        return (self.width - unit_width) // 2
     
     
     def check_bounds(self, points):
@@ -31,7 +36,6 @@ class Board:
         Add points to board and check for filled rows
         Return number of rows completed (and deleted)
         '''
-        
         self.filled = np.vstack((self.filled, points))
         return self.check_rows()
 
