@@ -8,6 +8,7 @@ import System.IO
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text as T
 import Options.Applicative hiding (command)
 import Graphics.Gloss.Interface.Pure.Display
 import Graphics.Gloss.Interface.IO.Game
@@ -34,6 +35,7 @@ data Arguments = Arguments { inputType :: InputType
                            , onlineProblem :: Integer
                            , filePath :: String
                            , seedNo :: Int
+                           , ourTag :: String
                            }
                deriving (Show, Eq)
 
@@ -68,6 +70,12 @@ arguments = Arguments
   <> long "seed"
   <> help "Seed number"
   <> value 0
+  )
+  <*> strOption
+  (  short 'g'
+  <> long "tag"
+  <> help "Tag"
+  <> value "Vis"
   )
 
 type PlayState = (Solution, ViewState, Field, Picture)
@@ -114,7 +122,7 @@ playFinish args cmds = do
      send <- queryUser "Send solution to the server?" False
      when send $ postOutput team token [RawOutput { problemId = onlineProblem args
                                                   , seed = seedNo args
-                                                  , tag = "Vis"
+                                                  , tag = T.pack $ ourTag args
                                                   , solution = cmdsS
                                                   }
                                        ]

@@ -50,6 +50,7 @@ executable dumbclient
                      , dumbclient
                      , aeson
                      , gloss
+                     , text
                      , bytestring
                      , optparse-applicative
   hs-source-dirs:      exe
