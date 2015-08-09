@@ -1,29 +1,34 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
+import Control.Monad
 import qualified Data.Vector as V
 import Data.Aeson
-import Linear
-import Control.Monad
+import Linear.V2
+import Linear.V3
+import Control.Lens
 import qualified Data.Array as A
 
 instance (FromJSON a) => FromJSON (V2 a) where
   parseJSON (Object c) = V2 <$> c .: "x" <*> c .: "y"
   parseJSON (Array vs) = do
-    unless (V.length vs == 2) $ fail "V2: invalid length"
+    unless (V.length vs == 2) $ fail "parseJSON (V2): invalid length"
     x <- parseJSON (vs V.! 0)
     y <- parseJSON (vs V.! 1)
     return $ V2 x y
+  parseJSON _ = fail "parseJSON (V2): invalid type"
 
 instance (FromJSON a) => FromJSON (V3 a) where
   parseJSON (Object c) = V3 <$> c .: "x" <*> c .: "y" <*> c .: "z"
   parseJSON (Array vs) = do
-    unless (V.length vs == 3) $ fail "V3: invalid length"
+    unless (V.length vs == 3) $ fail "parseJSON (V3): invalid length"
     x <- parseJSON (vs V.! 0)
     y <- parseJSON (vs V.! 1)
     z <- parseJSON (vs V.! 2)
     return $ V3 x y z
+  parseJSON _ = fail "parseJSON (V3): invalid type"
 
 type Cell = V2 Int
 
@@ -45,3 +50,6 @@ data Filled = NotFilled
             deriving (Eq, Show)
 
 type ResultField = A.Array (Int, Int) Filled
+
+cell :: Iso (V2 a) (V2 b) (a, a) (b, b)
+cell = iso (\(V2 x y) -> (x, y)) (\(x, y) -> V2 x y)

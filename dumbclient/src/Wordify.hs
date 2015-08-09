@@ -1,3 +1,5 @@
+module Wordify where
+
 import Control.Arrow
 import Data.List
 import Data.Maybe
@@ -20,7 +22,7 @@ maps = M.fromList $ map (second S.fromList) list
 
 powerWords :: Map [Command] String
 powerWords = M.fromList $ map (\s -> (map conv s, s)) list
-  where conv c = fst $ fromJust $ find (S.member c . snd) $ M.fromList maps
+  where conv c = fst $ fromJust $ find (S.member c . snd) $ M.toList maps
         list = [ "ea!"
                ]
 

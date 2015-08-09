@@ -29,3 +29,4 @@ processedField field = array size pts
         doUnit u = (conv $ pivot u, CellPart $ pure 0.1) : map (\c -> (conv c, CellPart $ color u)) (S.toList $ members u)
         pts = map (\p -> maybe (p, NotFilled) (p, ) $ M.lookup p cells) $ range size
         merge (CellPart a) (CellPart b) = CellPart ((a + b) / 2)
+        merge _ _ = error "merge: impossible"

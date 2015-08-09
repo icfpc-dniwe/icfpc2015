@@ -4,18 +4,16 @@ module ReadWrite where
 
 import Data.ByteString (ByteString)
 import Data.Text (Text)
+import Data.Set (Set)
 import Control.Monad
-import Data.List
-import Linear.V2
 import Network.Wreq
 import Control.Lens hiding ((.=))
 import Data.Aeson
-import Data.Aeson.TH
 import GHC.Generics (Generic)
 
 import Types
 
-data Unit = Unit { members :: [Cell]
+data Unit = Unit { members :: Set Cell
                  , pivot :: Cell
                  }
           deriving (Show, Eq, Generic, FromJSON)
@@ -24,7 +22,7 @@ data RawInput = RawInput { id :: Integer
                          , units :: [Unit]
                          , width :: Int
                          , height :: Int
-                         , filled :: [Cell]
+                         , filled :: Set Cell
                          , sourceLength :: Int
                          , sourceSeeds :: [Integer]
                          }

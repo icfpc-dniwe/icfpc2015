@@ -18,7 +18,7 @@ fieldPicture f = Scale 13 13 $ Pictures $ step False [0..height]
                   Built -> green
                   CellPart (V3 r g b) -> makeColor r g b 1
 
-        line y = map (\x -> Translate (fromIntegral x * 2) 0 $ cpol x y) [0..width]
+        pline y = map (\x -> Translate (fromIntegral x * 2) 0 $ cpol x y) [0..width]
 
         step _ [] = []
-        step r (y:ys) = map (Translate (if r then 1 else 0) (negate $ fromIntegral y * 2)) (line y) ++ step (not r) ys
+        step r (y:ys) = map (Translate (if r then 1 else 0) (negate $ fromIntegral y * 2)) (pline y) ++ step (not r) ys
