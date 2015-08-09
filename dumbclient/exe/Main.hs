@@ -97,7 +97,7 @@ playEvent cmds ev@(EventKey (Char c) Down _ _) (st, field, pic) = case c of
 
   where doCmd' cmd = do
           let (field', b) = doCmd cmd field
-          print (score field', sourceLength field', c)
+          print (score field', sourceLength field', cmd)
           modifyIORef cmds (cmd:)
           when b $ throwIO FinishedPlaying
           return (st, field', fieldPicture $ resultField field')
