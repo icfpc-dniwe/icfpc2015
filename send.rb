@@ -13,7 +13,7 @@ req['Content-Type'] = 'application/json'
 data = File.read (ARGF.argv[0] or raise "Give me path to a file")
 
 Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-  req.body = data.to_json
+  req.body = data
   res = http.request req
   puts "#{res.code}: #{res.message}"
 end

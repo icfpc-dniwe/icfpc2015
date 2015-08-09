@@ -78,6 +78,15 @@ class Unit:
         self.cells = self.cells + self.pivot
 
 
+    def is_central_symmetric(self):
+        self.cells -= self.pivot
+        retv = True;
+        for cell in self.cells:
+            if (-cell[0], -cell[1], -cell[2]) not in self.cells:
+                retv = False
+        self.cells += self.pivot
+        return retv
+
     def shift(self, direction):
         if direction == Move.W: # W
             shift = np.array([-1, 1, 0], dtype='int32')

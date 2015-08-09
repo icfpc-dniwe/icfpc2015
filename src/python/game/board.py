@@ -14,6 +14,7 @@ from common.tools import points2hex, hex2points
 from common.constants import Move, Rotate
 
 from copy import deepcopy
+import time
 
 POSSIBLE_MOVES = set([Move.E, Move.W, Move.SW, Move.SE, Rotate.CW, Rotate.CCW])
 OPPOSITE_MOVES = {\
@@ -113,8 +114,16 @@ class Board:
         return True
 
     def get_valid_final_states(self, unit):
+        '''
+        Returns [(path, unit, orientation)]
+        path - list of moves
+        unit - final state
+        orientation - sum of rotations
+        '''
+        before = time.time()
+        allowed_rots = 3 if not unit.is_central_symmetric() else 1
         all_paths = []
-        tree = {'action': -1, 'move_chain': [], 'rot_count': 0, 'path': [], 'unit': deepcopy(unit), 'orientation': 0}
+        tree = {'action': -1, 'move_chain': [], 'rot_count': 0, 'path': [], 'unit': deepcopy(unit), 'orientation': 0, 'state_set': set(set([(cell[0], cell[1], cell[2]) for cell in unit.cells]))}
         working_list = [{'parent' : tree}]
         while len(working_list) > 0:
             __curt = working_list.pop()
@@ -125,13 +134,14 @@ class Board:
                 curt['move_chain'] = deepcopy(__curt['parent']['move_chain'])
                 curt['rot_count'] = __curt['parent']['rot_count']
                 curt['orientation'] = __curt['parent']['orientation']
+                curt['state_set'] = deepcopy(__curt['parent']['state_set'])
                 if (action in ROTATION_ACTION):
                     curt['rot_count'] += 1
                     curt['orientation'] += 1 if action == Rotate.CW else -1
                     if (action == __curt['parent']['action']):
-                        if (curt['rot_count'] > 3):
+                        if (curt['rot_count'] > allowed_rots):
                             #print("Fail rot")
-                            continue #3 due > 180 degrees rotation
+                            continue
                 else:
                     curt['rot_count'] = 0
 
@@ -144,16 +154,37 @@ class Board:
 
                 newu = deepcopy(__curt['parent']['unit'])
                 newu.move(action)
+
+                set_of_cells = set([(cell[0], cell[1], cell[2]) for cell in newu.cells])
+                if set_of_cells in curt['state_set']:
+                    continue
+                else:
+                    curt['state_set'] = curt['state_set'].union(deepcopy(set_of_cells))
+
+                curt['unit'] = newu
+                curt['path'] = deepcopy(__curt['parent']['path']) + [action]
+                if action not in curt['move_chain']:
+                    curt['move_chain'] += [action]
+
                 if not self.is_locked(np.array(newu.cells)):
-                    curt['unit'] = newu
-                    curt['path'] = deepcopy(__curt['parent']['path']) + [action]
-                    if action not in curt['move_chain']:
-                        curt['move_chain'] += [action]
                     working_list += [{'parent': curt}]
                     #print("Added")
-                    #res = self.__get_all_final_states(newu, path + [action], action, new_rot_count, move_chain.union(set([action])))
-                    #all_paths += res
                 else:
                     #print("Locked")
+<<<<<<< Updated upstream
                     all_paths += [(deepcopy(__curt['parent']['path']), deepcopy(unit), __curt['parent']['orientation'])]
         return all_paths
+=======
+                    all_paths += [(deepcopy(curt['path']), deepcopy(newu), curt['orientation'])]
+        after = time.time()
+        print("%.2gs" % (after-before))
+        return all_paths
+
+    def get_all_longest_paths(self, unit):
+        all_sols = get_valid_final_states(unit)
+        maxpthlen = 0
+        maxsol = None
+        for sol in all_sols:
+            if (len(sol[0]) > maxpthlen):
+                maxsol = sol
+>>>>>>> Stashed changes
