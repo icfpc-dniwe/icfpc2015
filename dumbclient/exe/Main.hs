@@ -7,14 +7,15 @@ import Data.List
 import Data.Maybe
 import System.IO
 import qualified Data.Aeson as J
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import Options.Applicative hiding (command)
 import Graphics.Gloss.Interface.Pure.Display
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Data.ViewState hiding (Command)
+import System.Environment
 
 import Bot hiding (solution)
 import Types
@@ -126,17 +127,20 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
         finish cmds' = do
           print cmds'
           let cmdsS = wordify cmds'
-          putStrLn cmdsS
+              output = RawOutput { problemId = onlineProblem args
+                                 , seed = D.sourceSeeds ri !! seedNo args
+                                 , tag = T.pack $ ourTag args
+                                 , solution = cmdsS
+                                 }
+          BL.putStrLn $ J.encode output
           case inputType args of
            File -> return ()
            Online -> do
              send <- queryUser "Send solution to the server?" False
-             when send $ postOutput team token [RawOutput { problemId = onlineProblem args
-                                                          , seed = D.sourceSeeds ri !! seedNo args
-                                                          , tag = T.pack $ ourTag args
-                                                          , solution = cmdsS
-                                                          }
-                                               ]
+             when send $ do
+               team <- read <$> getEnv "TEAM_ID"
+               token <- B.pack <$> getEnv "TOKEN"
+               postOutput team token [output]
           fail "Finished!"
   
 playEvent _ _ ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
@@ -224,9 +228,3 @@ main = execParser opts >>= visualize
       (  fullDesc
       <> progDesc "Visualize ICFPC 2015 maps: HJKL to move, UI to rotate."
       )
-
-token :: B.ByteString
-token = "53/b8w5nkWTgqhWm00puFJMoBk3NPMMs3TAPAD8eSU0="
-
-team :: Integer
-team = 180

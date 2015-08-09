@@ -5,10 +5,10 @@ require 'json'
 
 $phrase = "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
 #$phrase = "ei! 000k4k4ei! 22224ei! 24ei!044ei!004222ei!004224222240044"
-$token = "53/b8w5nkWTgqhWm00puFJMoBk3NPMMs3TAPAD8eSU0="
-$team = 180
+$token = ENV['TOKEN'] or raise "Token not found"
+$team = ENV['TEAM_ID'] or raise "Team ID not found"
 
-uri = URI("https://davar.icfpcontest.org/teams/#{$team}/solutions")
+uri = URI "https://davar.icfpcontest.org/teams/#{$team}/solutions"
 req = Net::HTTP::Post.new uri
 req.basic_auth '', $token
 req['Content-Type'] = 'application/json'
