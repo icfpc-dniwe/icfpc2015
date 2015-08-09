@@ -180,7 +180,8 @@ visualize args = do
       display window black pic
 
     (File, Solved) -> do
-      [inp] <- getFile
+      inp' <- getFile
+      let inp = inp' !! seedNo args
       problem <- getInput $ problemId inp
       let startField = toField problem (fromJust $ findIndex (== seed inp) (D.sourceSeeds problem))
           startState = (dewordify $ solution inp, viewStateInit, startField, fieldPicture $ resultField startField)
