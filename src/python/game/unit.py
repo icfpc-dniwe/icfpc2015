@@ -31,6 +31,9 @@ class Unit:
         #self.cells[:, 2] = cells2d[:, 1]
         self.cells = points2hex(cells)
 
+    def __repr__(self):
+        x,y = hex2points(np.array([self.pivot]))[0]
+        return "pvt: ({0}, {1})".format(x,y)
 
     def clone(self):
         return deepcopy(self)

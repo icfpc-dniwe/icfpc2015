@@ -11,6 +11,23 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 import numpy as np
 
 from common.tools import points2hex, hex2points
+from common.constants import Move, Rotate
+
+from copy import deepcopy
+
+POSSIBLE_MOVES = set([Move.W, Move.E, Move.SW, Move.SE, Rotate.CW, Rotate.CCW])
+OPPOSITE_MOVES = {\
+    Move.W : set([Move.E]),\
+    Move.E : set([Move.W]),\
+    Rotate.CW : set([Rotate.CCW]),\
+    Rotate.CCW : set([Rotate.CW]),\
+    Move.SW : set([]),\
+    Move.SE : set([]),\
+    -1 : set([])
+}
+ROTATION_ACTION = set([Rotate.CW, Rotate.CCW])
+HORIZONTAL_MOVE_ACTION = set([Move.E, Move.W])
+VERTICAL_MOVE_ACTION = set([Move.SW, Move.SE])
 
 class Board:
     def __init__(self, width, height, filled=[]):
@@ -29,23 +46,16 @@ class Board:
     
     
     def check_bounds(self, points):
-        points2d = hex2points(points)
-        return ((points2d < 0).any() or 
-                any(points2d[:, 0] >= self.width) or 
-                any(points2d[:, 1] >= self.height))
-        #~ print(any(points[:, 2] < 0))
-        #~ print(any(points[:, 0] >= self.width - (points[:, 2] // 2)))
-        #~ print(any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)))
-        #~ print(any(points[:, 2] >= self.height))
-        #~ print(any(points[:, 0] < -(points[:, 2] // 2)))
-        #~ print(any(points[:, 0] < -((points[:, 2] + 1) // 2)))
-        #~ return (any(points[:, 2] < 0) or  # top
-                #~ any(points[:, 0] >= self.width - (points[:, 2] // 2)) or  # right x
-                #~ any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)) or  # right y
-                #~ any(points[:, 2] >= self.height) or  # bottom
-                #~ any(points[:, 0] < -(points[:, 2] // 2)) or  # left x
-                #~ any(points[:, 0] < -((points[:, 2] + 1) // 2))) # left y
-    
+        '''
+        return (any(points[:, 2] < 0) or  # top
+                any(points[:, 0] >= self.width - (points[:, 2] // 2)) or  # right x
+                any(points[:, 0] >= - self.width - ((points[:, 2] + 1) // 2)) or  # right y
+                any(points[:, 2] >= height) or  # bottom
+                any(points[:, 0] < -(points[:, 2] // 2)) or  # left x
+                any(points[:, 0] < -((points[:, 2] + 1) // 2))) # left y
+        '''
+        pts = hex2points(points)
+        return not all(map(lambda p: (p[0] < self.width) and (p[0] >= 0) and (p[1] < self.height) and (p[1] >= 0), pts))
     
     def add_cells(self, points):
         '''
@@ -93,14 +103,52 @@ class Board:
                 rows_deleted += 1
         return rows_deleted
 
-    def __get_all_final_states(self, unit, path):
-        moves = [Move.W, Move.E, Move.SW, Move.SE, Rotate.CW, Rotate.CCW]
-        newst = deepcopy(unit).move(action)
-        all_paths = []
-        if not is_locked(newst):    
-            all_paths += [(self.__get_all_final_states(newst, path + [action]) for action in moves)]
-        else:
-            return all_paths
+    def __check_move_set(self, move_set, move):
+        if move not in VERTICAL_MOVE_ACTION:
+            return OPPOSITE_MOVES[move] not in move_set
+        return True
 
     def get_valid_final_states(self, unit):
-        return self.__get_all_final_states(unit, [])
+        #import pdb
+        #pdb.set_trace()
+        all_paths = []
+        tree = {'action': -1, 'move_set': set(), 'rot_count': 0, 'path': []}
+        working_list = [{'parent' : tree}]
+        while len(working_list) > 0:
+            curt = working_list.pop()
+            allowed_moves = POSSIBLE_MOVES - (OPPOSITE_MOVES[curt['parent']['action']])
+            for action in allowed_moves:
+                curt['action'] = action
+                curt['move_set'] = deepcopy(curt['parent']['move_set'])
+                curt['rot_count'] = curt['parent']['rot_count']
+                if (action in ROTATION_ACTION) and (action == curt['parent']['action']):
+                    if (curt['rot_count'] < 3):
+                        curt['rot_count'] += 1
+                    else:
+                        curt['unit'] = None
+                        print("Fail rot")
+                        continue #3 due > 180 degrees rotation
+                else:
+                    curt['rot_count'] = 0
+
+                if not self.__check_move_set(curt['move_set'], action):
+                    curt['unit'] = None
+                    print("Fail chain")
+                    continue #chain of (r+m+r+)* or (m+r+m+)* causes infinite cycle
+                elif action in VERTICAL_MOVE_ACTION:
+                    curt['move_set'] = set()
+
+                newu = deepcopy(unit)
+                newu.move(action)
+                if not self.is_locked(np.array(unit.cells)):
+                    curt['unit'] = newu
+                    curt['path'] = deepcopy(curt['parent']['path']) + [action]
+                    curt['move_set'].union(set([action]))
+                    working_list += [{'parent': curt}]
+                    print("Added")
+                    #res = self.__get_all_final_states(newu, path + [action], action, new_rot_count, move_set.union(set([action])))
+                    #all_paths += res
+                else:
+                    print("Locked")
+                    all_paths += [(path, unit)]
+        return all_paths
