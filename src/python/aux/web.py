@@ -17,4 +17,4 @@ def upload_solution(json_string):
   headers = { 'Content-Type': 'application/json' }
   auth = HTTPBasicAuth('', token)
 
-  requests.post(url, headers=headers, auth=auth)
+  requests.post(url, headers=headers, auth=auth, data=json_string)
