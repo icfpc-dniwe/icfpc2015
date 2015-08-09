@@ -134,13 +134,13 @@ class Board:
                     curt['orientation'] += 1 if action == Rotate.CW else -1
                     if (action == __curt['parent']['action']):
                         if (curt['rot_count'] > 3):
-                            print("Fail rot")
+                            #print("Fail rot")
                             continue #3 due > 180 degrees rotation
                 else:
                     curt['rot_count'] = 0
 
                 if not self.__check_move_chain(curt['move_chain'], action):
-                    print("Fail chain")
+                    #print("Fail chain")
                     continue #chain of (r+m+r+)* or (m+r+m+)* causes infinite cycle
                 
                 if action in VERTICAL_MOVE_ACTION:
@@ -154,10 +154,10 @@ class Board:
                     if action not in curt['move_chain']:
                         curt['move_chain'] += [action]
                     working_list += [{'parent': curt}]
-                    print("Added")
+                    #print("Added")
                     #res = self.__get_all_final_states(newu, path + [action], action, new_rot_count, move_chain.union(set([action])))
                     #all_paths += res
                 else:
-                    print("Locked")
+                    #print("Locked")
                     all_paths += [(deepcopy(__curt['parent']['path']), deepcopy(unit), __curt['parent']['orientation'])]
         return all_paths
