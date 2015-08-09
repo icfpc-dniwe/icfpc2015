@@ -22,13 +22,15 @@ cellToHCell (V2 x y) = V3 xx (-xx - y) y
 hcellToCell :: HCell -> Cell
 hcellToCell (V3 x _ z) = V2 (x + (z - z `mod` 2) `div` 2) z
 
-type HUnit = Set HCell
+data HUnit = HUnit { center :: HCell
+                   , members :: Set HCell
+                   }
+           deriving (Show, Eq)
 
 data Field = Field { filled :: Set HCell
                    , width :: Int
                    , height :: Int
-                   , unitCenter :: HCell
-                   , unit :: HUnit
+                   , unit :: Maybe HUnit
                    , availableUnits :: [HUnit]
                    , sourceLength :: Int
                    , randGen :: LCG
@@ -40,15 +42,13 @@ data Field = Field { filled :: Set HCell
 -- TODO: more things in cubic coordinates
 
 validate :: Field -> Bool
-validate f = distinct && borders
-  where cells = S.map (+ unitCenter f) $ unit f
+validate f@(Field { unit = Just u }) = distinct && borders
+  where cells = S.map (+ center u) $ members u
         distinct = cells == (cells S.\\ filled f)
         borders = all (\(V2 x y) -> x >= 0 && x < width f && y >= 0 && y < height f) $ map hcellToCell $ S.toList cells
+validate (Field { unit = Nothing }) = True
 
-validate' :: Field -> Maybe Field
-validate' f = if validate f then Just f else Nothing
-
-unitPlace :: HUnit -> Int -> HCell
+unitPlace :: Set HCell -> Int -> HCell
 unitPlace u w = cellToHCell $ V2 (c - left) (-top)
   where border = map hcellToCell $ S.toList u
         left = minimum $ map (\(V2 x _) -> x) border
@@ -73,42 +73,47 @@ clearLines f = (tn, f { filled = S.fromList $ concatMap revert $ M.toList tm })
 
 moveScore :: HUnit -> Int -> Int -> Float
 moveScore u curr prev = points + bonus
-  where points = fromIntegral (S.size u) + 100 * (1 + fromIntegral curr) * fromIntegral curr / 2
+  where points = fromIntegral (S.size $ members u) + 100 * (1 + fromIntegral curr) * fromIntegral curr / 2
         bonus
           | prev > 1 = fromIntegral (floor $ (fromIntegral prev - 1) * points / 10 :: Int)
           | otherwise = 0
 
-nextUnit :: Field -> Maybe (Field, Bool)
-nextUnit f = (, left <= 0) <$> validate' f'''
+freezeUnit :: Field -> Field
+freezeUnit f@(Field { unit = Just u }) = f''
+  where (lnum, f') = clearLines f { filled = filled f `S.union` S.map (+ center u) (members u) 
+                                  , unit = Nothing
+                                  }
+        f'' = f' { score = moveScore u lnum (prevLines f') + score f'
+                 , prevLines = lnum
+                 }
+freezeUnit f@(Field { unit = Nothing }) = f
+
+nextUnit :: Field -> Maybe Field
+nextUnit f
+  | sourceLength f <= 0 = Just f
+  | otherwise = if validate f' then Just f' else Nothing
 
   where (un, gen) = nextLCG $ randGen f
         u = availableUnits f !! (fromIntegral un `mod` length (availableUnits f))
-        left = sourceLength f - 1
 
-        f' = f { filled = filled f `S.union` S.map (+ unitCenter f) (unit f)
-               , unit = u
-               , unitCenter = unitPlace u (width f)
-               , sourceLength = left
+        f' = f { unit = Just u { center = unitPlace (members u) (width f)
+                               }
+               , sourceLength = sourceLength f - 1
                , randGen = gen
                }
 
-        (lnum, f'') = clearLines f'
-
-        f''' = f'' { score = moveScore (unit f'') lnum (prevLines f'') + score f''
-                   , prevLines = lnum
-                   }
-
 toHUnit :: D.Unit -> HUnit
-toHUnit u = S.map ((subtract pivot) . cellToHCell) $ D.members u
+toHUnit u = HUnit { center = V3 0 0 0
+                  , members = S.map ((subtract pivot) . cellToHCell) $ D.members u
+                  }
   where pivot = cellToHCell $ D.pivot u
 
 toField :: D.RawInput -> Int -> Field
-toField input nseed = (fst $ fromJust $ nextUnit f) { score = 0 }
+toField input nseed = fromJust $ nextUnit f
   where f = Field { filled = S.map cellToHCell $ D.filled input
                   , width = D.width input
                   , height = D.height input
-                  , unitCenter = V3 0 0 0
-                  , unit = S.empty
+                  , unit = Nothing
                   , availableUnits = map toHUnit $ D.units input
                   , sourceLength = D.sourceLength input
                   , randGen = defLCG $ D.sourceSeeds input !! nseed
@@ -124,24 +129,35 @@ resultField field = Visualized { visFilled = pts
   where builtCol = V3 0 1 0
         cellCol = V3 1 0 0
         built = M.fromList $ map ((, builtCol) . hcellToCell) $ S.toList $ filled field
-        cells = M.fromList $ map convCells $ S.toList $ unit field
-        convCells = (, cellCol) . (+ hcellToCell (unitCenter field)) . hcellToCell
+        cells = case unit field of
+                 Just u -> M.fromList $ map (convCell $ center u) $ S.toList $ members u
+                 Nothing -> M.empty
+        convCell cc = (, cellCol) . (+ hcellToCell cc) . hcellToCell
         pts = built `M.union` cells
 
-move :: Field -> Direction -> Maybe Field
-move f d = validate' f { unitCenter = p + unitCenter f }
+move :: HUnit -> Direction -> HUnit
+move u d = u { center = p + center u }
   where p = case d of
           E -> V3 1 (-1) 0
           W -> V3 (-1) 1 0
           SE -> V3 0 (-1) 1
           SW -> V3 (-1) 0 1
 
-rotate :: Field -> TDirection -> Maybe Field
-rotate f d = validate' f { unit = S.map conv $ unit f }
+rotate :: HUnit -> TDirection -> HUnit
+rotate u d = u { members = S.map conv $ members u }
   where conv (V3 x y z) = case d of
           CW -> V3 (-z) (-x) (-y)
           CCW -> V3 (-y) (-z) (-x)
 
-command :: Field -> Command -> Maybe Field
-command f (Move m) = move f m
-command f (Turn r) = rotate f r
+command :: Command -> Field -> Maybe Field
+command cmd f@(Field { unit = Just u })
+  | validate f' = Just f'
+  | otherwise = case nextUnit (freezeUnit f) of
+    Nothing -> Nothing
+    Just f'' -> command cmd f''
+
+  where f' = f { unit = Just $ case cmd of
+                  Move m -> move u m
+                  Turn r -> rotate u r
+               }
+command _ f@(Field { unit = Nothing }) = Just f

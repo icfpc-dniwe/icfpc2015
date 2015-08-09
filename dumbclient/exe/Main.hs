@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import Control.Exception
 import Control.Monad
-import Data.Typeable
-import Data.IORef
+import Control.Exception
+import Data.Char
+import Data.Maybe
+import System.IO
 import qualified Data.Aeson as J
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import Options.Applicative hiding (command)
 import Graphics.Gloss.Interface.Pure.Display
@@ -13,10 +15,11 @@ import Graphics.Gloss.Data.ViewPort
 import Graphics.Gloss.Data.ViewState hiding (Command)
 
 import Types
-import ReadWrite (getInput)
-import Field (Field(..), toField, nextUnit, command, resultField)
+import ReadWrite (RawOutput(..), getInput, postOutput)
+import Field (Field(..), toField, command, resultField)
 import ProcessedField (processedField)
 import Visualize
+import Wordify
 
 data InputType = Online
                | File
@@ -67,45 +70,65 @@ arguments = Arguments
   <> value 0
   )
 
-type PlayState = (ViewState, Field, Picture)
+type PlayState = ([Command], ViewState, Field, Picture)
 
 playShow :: PlayState -> IO Picture
-playShow (st, _, pic) = return $ applyViewPortToPicture (viewStateViewPort st) $ pic
+playShow (_, st, _, pic) = return $ applyViewPortToPicture (viewStateViewPort st) $ pic
 
-data PlacementFailure = PlacementFailure
-                      deriving (Show, Typeable, Exception)
-
-data FinishedPlaying = FinishedPlaying
-                     deriving (Show, Typeable, Exception)
-
-doCmd :: Command -> Field -> (Field, Bool)
-doCmd c field = case command field c of
-  Nothing -> case nextUnit field of
-    Nothing -> throw PlacementFailure
-    Just ub -> ub
-  Just u -> (u, False)
-
-playEvent :: IORef [Command] -> Event -> PlayState -> IO PlayState
-playEvent cmds ev@(EventKey (Char c) Down _ _) (st, field, pic) = case c of
+playEvent :: Arguments -> Event -> PlayState -> IO PlayState
+playEvent args ev@(EventKey (Char c) Down _ _) (cmds, st, field, pic) = case c of
   'h' -> doCmd' (Move W)
   'j' -> doCmd' (Move SW)
   'k' -> doCmd' (Move SE)
   'l' -> doCmd' (Move E)
   'u' -> doCmd' (Turn CW)
   'i' -> doCmd' (Turn CCW)
-  _ -> return (updateViewStateWithEvent ev st, field, pic)
+  _ -> return (cmds, updateViewStateWithEvent ev st, field, pic)
 
   where doCmd' cmd = do
-          let (field', b) = doCmd cmd field
+          field' <- case command cmd field of
+                    Nothing -> do
+                      putStrLn "Placement failure!"
+                      playFinish args cmds
+                    Just f -> return f
           print (score field', sourceLength field', cmd)
-          modifyIORef cmds (cmd:)
-          when b $ throwIO FinishedPlaying
-          return (st, field', fieldPicture $ resultField field')
+          let cmds' = cmd : cmds
+          when (isNothing $ unit field') $ do
+            putStrLn "Success!"
+            playFinish args (reverse cmds')
+          return (cmds', st, field', fieldPicture $ resultField field')
   
-playEvent _ ev (st, field, pic) = return (updateViewStateWithEvent ev st, field, pic)
+playEvent _ ev (cmds, st, field, pic) = return (cmds, updateViewStateWithEvent ev st, field, pic)
 
 playAdvance :: Float -> PlayState -> IO PlayState
 playAdvance _ = return
+
+playFinish :: Arguments -> [Command] -> IO a
+playFinish args cmds = do
+  print cmds
+  let cmdsS = wordify cmds
+  putStrLn cmdsS
+  case inputType args of
+   File -> return ()
+   Online -> do
+     send <- queryUser "Send solution to the server?" False
+     when send $ postOutput team token [RawOutput { problemId = onlineProblem args
+                                                  , seed = seedNo args
+                                                  , tag = "Vis"
+                                                  , solution = cmdsS
+                                                  }
+                                       ]
+  fail "Finished!"
+
+queryUser :: String -> Bool -> IO Bool
+queryUser q def = bracket (hGetBuffering stdout) (hSetBuffering stdout) $ const $ do
+  hSetBuffering stdout NoBuffering
+  putStr $ q ++ " (" ++ (if def then "Y" else "y") ++ "/" ++ (if not def then "N" else "n") ++ "): "
+  s <- getLine
+  case map toLower s of
+   "y" -> return True
+   "n" -> return False
+   _ -> return def
 
 visualize :: Arguments -> IO ()
 visualize args = do
@@ -121,19 +144,13 @@ visualize args = do
 
   case (inputType args, inputFormat args) of
     (from, Standard) -> do
-      path <- newIORef []
       inp <- case from of
         Online -> getInput $ onlineProblem args
         File -> getFile
       let startField = toField inp (seedNo args)
-          startState = (viewStateInit, startField, fieldPicture $ resultField startField)
+          startState = ([], viewStateInit, startField, fieldPicture $ resultField startField)
 
-      playIO window black 30 startState playShow (playEvent path) playAdvance
-        `catch`
-        (\FinishedPlaying -> do
-            cmds <- reverse <$> readIORef path
-            print cmds
-        )
+      playIO window black 30 startState playShow (playEvent args) playAdvance
 
     (File, Processed) -> do
       inp <- getFile
@@ -148,3 +165,9 @@ main = execParser opts >>= visualize
       (  fullDesc
       <> progDesc "Visualize ICFPC 2015 maps: HJKL to move, UI to rotate."
       )
+
+token :: B.ByteString
+token = "53/b8w5nkWTgqhWm00puFJMoBk3NPMMs3TAPAD8eSU0="
+
+team :: Integer
+team = 180

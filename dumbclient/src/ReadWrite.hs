@@ -36,7 +36,7 @@ getInput n = do
   return (rs^.responseBody)
 
 data RawOutput = RawOutput { problemId :: Integer
-                           , seed :: Integer
+                           , seed :: Int
                            , tag :: Text
                            , solution :: String
                            }
@@ -47,4 +47,5 @@ postOutput teamid token outputs = do
   let opts = defaults & auth ?~ basicAuth "" token
       url = "https://davar.icfpcontest.org/teams/" ++ show teamid ++ "/solutions/"
   r <- postWith opts url (toJSON outputs)
-  unless ((r^.responseStatus.statusCode) == 200) $ fail "postOutput: failed"
+  print r
+  unless ((r^.responseStatus.statusCode) `div` 100 == 2) $ fail "postOutput: failed"
