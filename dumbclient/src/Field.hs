@@ -6,7 +6,6 @@ import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Map as M
-import Data.Array
 import Linear.V2
 import Linear.V3
 
@@ -117,16 +116,17 @@ toField input nseed = (fst $ fromJust $ nextUnit f) { score = 0 }
                   , prevLines = 0
                   }
 
-resultField :: Field -> ResultField
-resultField field = array size pts
-  where size = ((0, 0), (width field - 1, height field - 1))
-        built = M.fromList $ map (\(V2 x y) -> ((x, y), Built)) $ map hcellToCell $ S.toList $ filled field
-        cells = M.fromList $ map convUnit $ S.toList $ unit field
-        convUnit p =
-          let (V2 x y) = hcellToCell $ unitCenter field + p
-          in ((x, y), CellPart $ V3 1 0 0)
-        mpts = built `M.union` cells
-        pts = map (\p -> maybe (p, NotFilled) (p, ) $ M.lookup p mpts) $ range size
+resultField :: Field -> Visualized
+resultField field = Visualized { visFilled = pts
+                               , visWidth = width field
+                               , visHeight = height field
+                               }
+  where builtCol = V3 0 1 0
+        cellCol = V3 1 0 0
+        built = M.fromList $ map ((, builtCol) . hcellToCell) $ S.toList $ filled field
+        cells = M.fromList $ map convCells $ S.toList $ unit field
+        convCells = (, cellCol) . (+ hcellToCell (unitCenter field)) . hcellToCell
+        pts = built `M.union` cells
 
 move :: Field -> Direction -> Maybe Field
 move f d = validate' f { unitCenter = p + unitCenter f }

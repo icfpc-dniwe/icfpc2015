@@ -146,5 +146,5 @@ main = execParser opts >>= visualize
   where
     opts = info (helper <*> arguments)
       (  fullDesc
-      <> progDesc "Visualize ICFPC 2015 maps"
+      <> progDesc "Visualize ICFPC 2015 maps: HJKL to move, UI to rotate."
       )

@@ -6,9 +6,7 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Aeson
-import Linear.V2
 import GHC.Generics (Generic)
-import Data.Array
 
 import Types
 
@@ -21,12 +19,11 @@ data PUnit = PUnit { color :: CColor
                    }
            deriving (Show, Eq, Ord, Generic, FromJSON)
 
-processedField :: PField -> ResultField
-processedField field = array size pts
-  where size = ((0, 0), (30, 30))
-        cells = M.fromListWith merge $ concatMap doUnit $ S.toList $ units field
-        conv (V2 x y) = (x, y)
-        doUnit u = (conv $ pivot u, CellPart $ pure 0.1) : map (\c -> (conv c, CellPart $ color u)) (S.toList $ members u)
-        pts = map (\p -> maybe (p, NotFilled) (p, ) $ M.lookup p cells) $ range size
-        merge (CellPart a) (CellPart b) = CellPart ((a + b) / 2)
-        merge _ _ = error "merge: impossible"
+processedField :: PField -> Visualized
+processedField field = Visualized { visFilled = cells
+                                  , visWidth = 30
+                                  , visHeight = 30
+                                  }
+  where cells = M.fromListWith merge $ concatMap doUnit $ S.toList $ units field
+        doUnit u = (pivot u, 0.3) : map (\c -> (c, color u)) (S.toList $ members u)
+        merge a b = (a + b) / 2

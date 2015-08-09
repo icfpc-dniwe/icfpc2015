@@ -4,12 +4,12 @@
 module Types where
 
 import Control.Monad
+import Data.Map (Map)
 import qualified Data.Vector as V
 import Data.Aeson
 import Linear.V2
 import Linear.V3
 import Control.Lens
-import qualified Data.Array as A
 
 instance (FromJSON a) => FromJSON (V2 a) where
   parseJSON (Object c) = V2 <$> c .: "x" <*> c .: "y"
@@ -44,12 +44,10 @@ data Command = Move Direction
 
 type CColor = V3 Float
 
-data Filled = NotFilled
-            | Built
-            | CellPart CColor
-            deriving (Eq, Show)
-
-type ResultField = A.Array (Int, Int) Filled
+data Visualized = Visualized { visFilled :: Map Cell CColor
+                             , visWidth :: Int
+                             , visHeight :: Int
+                             }
 
 cell :: Iso (V2 a) (V2 b) (a, a) (b, b)
 cell = iso (\(V2 x y) -> (x, y)) (\(x, y) -> V2 x y)
