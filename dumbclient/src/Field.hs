@@ -59,7 +59,7 @@ unitPlace u w = cellToHCell $ V2 (c - left) (-top)
         left = minimum $ map (\(V2 x _) -> x) border
         right = maximum $ map (\(V2 x _) -> x) border
         top = minimum $ map (\(V2 _ y) -> y) border
-        c = ((w - (right - left)) `div` 2) - 1
+        c = ((w - (right - left + 1)) `div` 2)
 
 clearLines :: Field -> (Int, Field)
 clearLines f = (tn, f { filled = S.fromList $ concatMap revert $ M.toList tm })
