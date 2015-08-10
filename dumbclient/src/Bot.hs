@@ -75,7 +75,6 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         turn = tryOr [Turn CW, Turn CCW]
         moveH = tryOr [Move W, Move E]
         drop = tryOr [Move SW, Move SE]
-        dumb _ = return $ Crossroad M.empty
 
         myPath = moveH $ dropSome cheight $ turn $ dropAll
 
@@ -122,7 +121,7 @@ gameTree = gt 0
           GCrossroad sc $ M.fromList $ map transform $ take bestN $ bests field 
 
           where transform (si, sc) = (solutionCmds si, gt sc (newField si))
-                bestN = 4
+                bestN = 1
 
 bestGame :: Int -> GameTree -> Solution
 bestGame _ (GDeadEnd _) = error "bestGame: no future!"
