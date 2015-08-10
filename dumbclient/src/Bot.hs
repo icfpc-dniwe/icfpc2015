@@ -91,7 +91,7 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
   where transform (cells, si) = (si, scorify cells (solutionCmds si) (score (newField si) - score field))
 
         scorify cells sol scor = a1 * scor + 
-          a2 * low cells + 
+          a2 * low + 
           a3 * whole +
           a4 * bump
 
@@ -101,11 +101,11 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         cols' = M.fromListWith min $ map ((\(V2 x y) -> (x, y)) . hcellToCell) $ S.toList $ filled field
         cols = map snd $ M.toAscList $ cols' `M.union` M.fromList (zip [0..width field - 1] (repeat $ height field - 1))
 
-        low cells = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList cells
+        low = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList $ filled field
         whole = sum $ map (\c -> if S.null $ neighbors c S.\\ filled field then 1 else 0) $ S.toList $ filled field
         bump = fromIntegral $ bumpiness cols
 
-        a1 = 0.02
+        a1 = 0.5
         a2 = 0.01
         a3 = 30.0
         a4 = -40.0
@@ -121,7 +121,7 @@ gameTree = gt 0
           GCrossroad sc $ M.fromList $ map transform $ take bestN $ bests field 
 
           where transform (si, sc) = (solutionCmds si, gt sc (newField si))
-                bestN = 1
+                bestN = 2
 
 bestGame :: Int -> GameTree -> Solution
 bestGame _ (GDeadEnd _) = error "bestGame: no future!"
