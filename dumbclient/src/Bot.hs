@@ -88,7 +88,7 @@ solutions = sols []
 
 bests :: Field -> [(SolutionInfo, Float)]
 bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathTree field
-  where transform (cells, si) = (si, scorify cells (solutionCmds si) (score $ newField si))
+  where transform (cells, si) = (si, scorify cells (solutionCmds si) (score (newField si) - score field))
 
         scorify cells sol scor = a1 * scor + 
           a2 * low + 
