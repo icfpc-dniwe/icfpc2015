@@ -48,21 +48,25 @@ $phrases = [#"deep seven",#not
 			# "shantaks", #not
 			# "deep ones", #not
 			# "azathoth", #not
-			"john bigboote", #POWER_WORD
-			"10 planet",
-			"10th planet",
-			"h.p.lovecraft",
-			"h. p. lovecraft",
-			"2003 ub313", #--
-			"yogsothoth",
-			"shubniggurath",
-			"nyarlathotep",
-			"hastur",
-			"ghatanothoa",
-			"hypnos",
-			"ithaqua",
-			"nodens",
-			"arkham", 
+			# "john bigboote", #POWER_WORD
+			# "10 planet", #not
+			# "10th planet", #not
+			# "h.p.lovecraft", #not
+			# "h. p. lovecraft", #not
+			# "2003 ub313", #not
+			# "yogsothoth", #POWER_WORD
+			# "shubniggurath", #not
+			# "h.p.lovecraft",
+			# "nyarlathotep",
+			# "hastur",
+			# "ghatanothoa",
+			# "hypnos",
+			# "ithaqua",
+			# "nodens",
+			# "hastur",
+			# "arkham",
+			"vancouver",
+			"platet 10",
 			"dunwich",
 			"innsmouth",
 			"kingsport",
@@ -149,7 +153,7 @@ seeds = [0,
 		 18,
 		]
 
-$task_offset = 10
+$task_offset = 0
 
 uri = URI("https://davar.icfpcontest.org/teams/#{$team}/solutions")
 req = Net::HTTP::Post.new uri
@@ -175,43 +179,49 @@ def puts_scores(scores)
 	}
 end
 
-scores = get_scores($team)
-interval = 30
-
-puts "INITIAL"
-puts_scores(scores)
-puts
-
-Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-  $phrases.each_with_index do |w,i|
-  	puts "Checking \"#{w}\""
-  	($task_offset..24).map { |pid|
-    	data = [{ problemId: pid, seed: seeds[pid], tag: i.to_s, solution: w }]
-    	req.body = data.to_json
-    	res = http.request req
-    	raise "Cthulhu is upon us!" unless res.is_a? Net::HTTPSuccess
-	}
-
-	for t in (0..250/interval)
-		sleep interval
-		begin
-			new_scores = get_scores $team
-		rescue
-			retry
-		end
-
-		i = 0
-		for score in scores
-			if score != new_scores[i]
-				puts "#{$task_offset+i} => #{new_scores[i]}, SD = #{new_scores[i]['score']-score['score']}, PSD = #{new_scores[i]['power_score']-score['power_score']}"
-			end
-			i += 1
-		end
-
-		scores = new_scores
-	 end
-  end
+# puts "INITIAL"
+while 1
+	begin
+		scores = get_scores($team)
+		interval = 30
+		puts_scores(scores)
+		puts
+	rescue
+		retry
+	end
+	sleep interval
 end
+
+# Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+#   $phrases.each_with_index do |w,i|
+#   	puts "Checking \"#{w}\""
+#   	($task_offset..24).map { |pid|
+#     	data = [{ problemId: pid, seed: seeds[pid], tag: i.to_s, solution: w }]
+#     	req.body = data.to_json
+#     	res = http.request req
+#     	raise "Cthulhu is upon us!" unless res.is_a? Net::HTTPSuccess
+# 	}
+
+# 	for t in (0..300/interval)
+# 		sleep interval
+# 		begin
+# 			new_scores = get_scores $team
+# 		rescue
+# 			retry
+# 		end
+
+# 		i = 0
+# 		for score in scores
+# 			if score != new_scores[i]
+# 				puts "#{$task_offset+i} => #{new_scores[i]}, SD = #{new_scores[i]['score']-score['score']}, PSD = #{new_scores[i]['power_score']-score['power_score']}"
+# 			end
+# 			i += 1
+# 		end
+
+# 		scores = new_scores
+# 	 end
+#   end
+# end
 
 # def dive(p, b)
 # 	if b.instance_of? Array

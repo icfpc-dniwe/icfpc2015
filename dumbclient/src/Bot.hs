@@ -15,6 +15,7 @@ import Linear.V3
 
 import Types
 import Field
+import Wordify
 
 import Debug.Trace
 
@@ -93,7 +94,8 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         scorify cells sol scor = a1 * scor + 
           a2 * low cells + 
           a3 * whole +
-          a4 * bump
+          a4 * bump +
+          a5 * (fromIntegral $ countPws sol)
 
         bumpiness (a:b:hs) = abs (a - b) + bumpiness (b:hs)
         bumpiness _ = 0
@@ -109,6 +111,7 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         a2 = 0.01
         a3 = 0.0
         a4 = -0.0
+        a5 = 100.0
 
 data GameTree = GDeadEnd !Float
               | GCrossroad !Float !(Map Solution GameTree)

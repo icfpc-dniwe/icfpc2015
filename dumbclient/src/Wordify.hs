@@ -55,18 +55,21 @@ checkWords = map checkWord . tails
 wordifyDumb :: Solution -> String
 wordifyDumb sol = foldr1 (++) $ map (pure . S.findMin) $ map (maps M.!) sol
 
-wordify' :: Solution -> String -> String
-wordify' [] str = str
-wordify' sol@(h:t) str =
+wordify' :: Solution -> String -> Int -> (Int, String)
+wordify' [] str cnt = (cnt, str)
+wordify' sol@(h:t) str cnt =
   let pw_set = checkWord sol in
     if pw_set /= S.empty then
       let max_pw = S.findMax pw_set in
-        wordify' (drop (length max_pw) sol) $ str ++ max_pw
+        wordify' (drop (length max_pw) sol) (str ++ max_pw) (cnt+1)
     else
-      wordify' t (str ++ wordifyDumb [h])
+      wordify' t (str ++ wordifyDumb [h]) cnt
 
 wordify :: Solution -> String
-wordify sol = wordify' sol ""
+wordify sol = snd $ wordify' sol "" 0
+
+countPws :: Solution -> Int
+countPws sol = fst $ wordify' sol "" 0
 
 dewordify :: String -> Solution
 dewordify = map (remaps M.!)
