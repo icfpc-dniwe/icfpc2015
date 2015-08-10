@@ -8,7 +8,6 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import Linear.V2
 import Linear.V3
-import Debug.Trace
 
 import qualified ReadWrite as D
 import LCG
@@ -163,14 +162,13 @@ command cmd f@(Field { unit = Just u })
   | validate f' = Just f'
   | otherwise = case nextUnit (freezeUnit f) of
     Nothing -> Nothing
-    Just f'' -> Just f''--command cmd f''
+    Just f'' -> Just f''
 
   where f' = f { unit = Just $ case cmd of
                   Move m -> move u m
                   Turn r -> rotate u r
                }
 command _ f@(Field { unit = Nothing }) = Just f
-
 
 neighbors :: HCell -> Set HCell
 neighbors c = S.fromList [c + sNW, c + sNE, c + sE, c + sSE, c + sSW, c + sW]

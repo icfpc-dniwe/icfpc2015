@@ -48,7 +48,7 @@ validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.e
           where 
                 dead f' = Just $ DeadEnd (absCoords u) (score f' - startScore)
 
-                check Nothing = return Nothing
+                check Nothing = return $ Just $ DeadEnd S.empty 0
                 check (Just f'@(Field { unit = Just u' })) = do
                   olds <- get
                   if | sourceLength f' /= sourceLength startf -> return $ dead f'
@@ -68,9 +68,9 @@ validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.e
         turn = tryOr [Turn CW, Turn CCW]
         moveH = tryOr [Move W, Move E]
 
-        --myPath = moveH $ dropSome cheight $ turn $ dropAll
-        myPath = moveH $ dropAll
+        myPath = moveH $ dropSome cheight $ turn $ dropAll
 
+-- TODO: can drop this to optimize further
 solutions :: PathTree -> Solutions
 solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)

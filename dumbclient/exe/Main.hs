@@ -207,7 +207,8 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
         doCmd cmd = do
           mfield <- processState cmd $ field $ playState s
           case mfield of
-           Nothing -> finish $ reverse $ commands $ playState s
+           Nothing -> do
+             finish $ reverse $ commands $ playState s
            Just field' -> do
              let cmds' = cmd : commands (playState s)
              if isNothing $ unit field'
