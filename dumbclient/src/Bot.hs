@@ -5,6 +5,7 @@ module Bot where
 import Data.List
 import Data.Ord
 import Data.Maybe
+import Control.Parallel.Strategies
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
@@ -62,7 +63,7 @@ validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
 solutions :: PathTree -> Solutions
 solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
-        sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
+        sols cmds (Crossroad ts) = foldr M.union M.empty $ parMap rseq (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
 findBest :: HCells -> Solutions -> (Solution, Float)
 findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
