@@ -5,6 +5,7 @@ module Bot where
 import Data.List
 import Data.Ord
 import Control.Monad.State.Strict
+import Control.Parallel.Strategies
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
@@ -68,7 +69,6 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         
         tryOr cmds next f = mergeSol <$> path cmds (tryOr cmds next) f <*> next f
 
-        dumb _ = return $ Crossroad M.empty 
         dropAll = path [Move SW, Move SE] dropAll
         dropSome 0 next = next
         dropSome n next = path [Move SW, Move SE] (dropSome (n - 1) next)
@@ -111,13 +111,13 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         a3 = 30.0
         a4 = -40.0
 
-data GameTree = GDeadEnd
+data GameTree = GDeadEnd !Float
               | GCrossroad !Float !(Map Solution GameTree)
               deriving (Show, Eq)
 
 gameTree :: Field -> GameTree
 gameTree = gt 0
-  where gt _ field@(Field { unit = Nothing }) = GDeadEnd
+  where gt sc field@(Field { unit = Nothing }) = GDeadEnd sc
         gt sc field@(Field { unit = Just u }) =
           GCrossroad sc $ M.fromList $ map transform $ take bestN $ bests field 
 
@@ -125,11 +125,11 @@ gameTree = gt 0
                 bestN = 4
 
 bestGame :: Int -> GameTree -> Solution
-bestGame _ GDeadEnd = error "bestGame: no future!"
+bestGame _ (GDeadEnd _) = error "bestGame: no future!"
 bestGame alln (GCrossroad _ startss) = fst $ maximumBy (comparing snd) $ map (\(s, gt) -> (s, best alln gt)) $ M.toList startss
-  where best 0 _ = 0
-        best n GDeadEnd = 0
-        best n (GCrossroad sc ss) = sc + maximum (map (best (n - 1) . snd) $ M.toList ss)
+  where best _ (GDeadEnd sc) = sc
+        best 0 (GCrossroad sc _) = sc
+        best n (GCrossroad _ ss) = maximum (map (best (n - 1) . snd) $ M.toList ss)
 
 ourBestGame :: GameTree -> Solution
 ourBestGame = bestGame 4
@@ -149,7 +149,7 @@ newBot f = Bot { currTree = t
                }
   where t = gameTree f
         nt = case t of
-          GDeadEnd -> GDeadEnd
+          GDeadEnd sc -> GDeadEnd sc
           GCrossroad _ ns -> ns M.! s
         s = ourBestGame t
 
@@ -165,5 +165,5 @@ advanceBot f bot = (c, bot' { solution = cmds })
 
         s = ourBestGame $ nextTree bot
         nt = case nextTree bot of
-             GDeadEnd -> GDeadEnd
+             GDeadEnd sc -> GDeadEnd sc
              GCrossroad _ ns -> ns M.! s
