@@ -1,18 +1,16 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, MultiWayIf #-}
 
 module Bot where
 
 import Data.List
 import Data.Ord
-import Data.Maybe
 import Control.Parallel.Strategies
+import Control.Monad.State.Strict
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
-import Linear.V2
 import Linear.V3
-import Debug.Trace
 
 import Types
 import Field
@@ -30,26 +28,39 @@ type OldsSet = Set HCells
 
 type Solutions = Map HCells (Solution, Float)
 
+mapMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m [b]
+mapMaybeM _ [] = return []
+mapMaybeM f (h:t) = do
+  r <- f h
+  case r of
+   Nothing -> mapMaybeM f t
+   Just x -> (x :) <$> mapMaybeM f t
+
 validPaths :: Field -> PathTree
 validPaths (Field { unit = Nothing }) = error "validPaths: no unit on the field"
-validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
-  where path :: [Command] -> (OldsSet -> Field -> PathTree) -> OldsSet -> Field -> PathTree
-        path _ _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
-        path cmds next olds f@(Field { unit = Just u }) =
-          Crossroad $ M.fromList $ mapMaybe (\c -> (c, ) <$> (command c f >>= check)) cmds
+validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.empty
+  where path :: [Command] -> (Field -> State OldsSet PathTree) -> Field -> State OldsSet PathTree
+        path _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
+        path cmds next f@(Field { unit = Just u }) = do
+          modify $ S.insert $ absCoords u
+          Crossroad <$> M.fromList <$> mapMaybeM (\c -> fmap (c, ) <$> check (command c f)) cmds
 
-          where olds' = S.insert (absCoords u) olds
-                check f'@(Field { unit = Just u' })
-                  | sourceLength f' /= sourceLength startf = Just $ DeadEnd (absCoords u) (score f' - startScore)
-                  | absCoords u' `S.member` olds' = Nothing
-                  | otherwise = Just $ next olds' f'
-                check f'@(Field { unit = Nothing }) = Just $ DeadEnd (absCoords u) (score f' - startScore)
+          where 
+                dead f' = Just $ DeadEnd (absCoords u) (score f' - startScore)
+
+                check Nothing = return Nothing
+                check (Just f'@(Field { unit = Just u' })) = do
+                  olds <- get
+                  if | sourceLength f' /= sourceLength startf -> return $ dead f'
+                     | absCoords u' `S.member` olds -> return Nothing
+                     | otherwise -> Just <$> next f'
+                check (Just f'@(Field { unit = Nothing })) = return $ dead f'
 
         cheight = maximum ys - minimum ys
           where ys = map (\(V3 _ _ z) -> z) $ S.toList $ members startu
         startScore = score startf
         
-        tryOr cmds next olds f = mergeSol (path cmds (tryOr cmds next) olds f) (next olds f)
+        tryOr cmds next f = mergeSol <$> path cmds (tryOr cmds next) f <*> next f
 
         dropAll = path [Move SW, Move SE] dropAll
         dropSome 0 next = next
@@ -57,8 +68,8 @@ validPaths startf@(Field { unit = Just startu }) = myPath S.empty startf
         turn = tryOr [Turn CW, Turn CCW]
         moveH = tryOr [Move W, Move E]
 
-        myPath = moveH $ dropSome cheight $ turn $ dropAll
-        --myPath = dropAll
+        --myPath = moveH $ dropSome cheight $ turn $ dropAll
+        myPath = moveH $ dropAll
 
 solutions :: PathTree -> Solutions
 solutions = sols []
@@ -80,8 +91,8 @@ findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol,
         a3 = 2.0
         a4 = -5.0
 
-data Bot = Bot { solution :: Solution
-               , unitNum :: Int
+data Bot = Bot { solution :: !Solution
+               , unitNum :: !Int
                }
          deriving (Show, Eq)
 
