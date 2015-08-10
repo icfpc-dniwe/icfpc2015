@@ -76,8 +76,8 @@ solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
         sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
-findBest :: Field -> Solutions -> (Solution, Float)
-findBest field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
+bests :: Field -> Solutions -> (Solution, Float)
+bests field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
   where scorify cells sol scor = a1 * scor + 
           a2 * low cells + 
           a3 * whole +
@@ -87,10 +87,10 @@ findBest field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, 
         bumpiness _ = 0
 
         cols' = M.fromListWith min $ map ((\(V2 x y) -> (x, y)) . hcellToCell) $ S.toList $ filled field
-        cols = map snd $ M.toAscList $ cols' `M.union` M.fromList (zip [0..width field - 1] [0,0..])
+        cols = map snd $ M.toAscList $ cols' `M.union` M.fromList (zip [0..width field - 1] (repeat $ height field - 1))
 
         low cells = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList cells
-        whole = sum (map (\c -> if S.null $ neighbors c S.\\ filled field then 1 else 0) $ S.toList $ filled field)
+        whole = sum $ map (\c -> if S.null $ neighbors c S.\\ filled field then 1 else 0) $ S.toList $ filled field
         bump = fromIntegral $ bumpiness cols
 
         a1 = 0.02
@@ -104,14 +104,14 @@ data Bot = Bot { solution :: !Solution
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f = Bot { solution = fst $ findBest f $ solutions $ validPaths f
+newBot f = Bot { solution = fst $ bests f $ solutions $ validPaths f
                , unitNum = sourceLength f
                }
 
 advanceBot :: Field -> Bot -> (Command, Bot)
 advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
-          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest f $ solutions $ validPaths f
+          | sourceLength f /= unitNum bot = Bot { solution = fst $ bests f $ solutions $ validPaths f
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot
