@@ -91,7 +91,7 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
   where transform (cells, si) = (si, scorify cells (solutionCmds si) (score (newField si) - score field))
 
         scorify cells sol scor = a1 * scor + 
-          a2 * low + 
+          a2 * low cells + 
           a3 * whole +
           a4 * bump
 
@@ -101,14 +101,14 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         cols' = M.fromListWith min $ map ((\(V2 x y) -> (x, y)) . hcellToCell) $ S.toList $ filled field
         cols = map snd $ M.toAscList $ cols' `M.union` M.fromList (zip [0..width field - 1] (repeat $ height field - 1))
 
-        low = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList $ filled field
+        low cells = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList cells
         whole = sum $ map (\c -> if S.null $ neighbors c S.\\ filled field then 1 else 0) $ S.toList $ filled field
         bump = fromIntegral $ bumpiness cols
 
         a1 = 0.5
         a2 = 0.01
-        a3 = 30.0
-        a4 = -40.0
+        a3 = 0.0
+        a4 = -0.0
 
 data GameTree = GDeadEnd !Float
               | GCrossroad !Float !(Map Solution GameTree)
