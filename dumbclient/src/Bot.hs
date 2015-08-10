@@ -17,8 +17,8 @@ import Types
 import Field
 
 data PathTree = DeadEnd !HCells !Float
-             | Crossroad !(Map Command PathTree)
-             deriving (Show, Eq)
+              | Crossroad !(Map Command PathTree)
+              deriving (Show, Eq)
 
 mergeSol :: PathTree -> PathTree -> PathTree
 mergeSol a@(DeadEnd _ _) (DeadEnd _ _) = a

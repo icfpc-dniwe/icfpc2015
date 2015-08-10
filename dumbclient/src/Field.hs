@@ -159,7 +159,7 @@ command cmd f@(Field { unit = Just u })
   | validate f' = Just f'
   | otherwise = case nextUnit (freezeUnit f) of
     Nothing -> Nothing
-    Just f'' -> command cmd f''
+    Just f'' -> Just f''--command cmd f''
 
   where f' = f { unit = Just $ case cmd of
                   Move m -> move u m

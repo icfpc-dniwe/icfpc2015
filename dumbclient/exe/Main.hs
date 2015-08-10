@@ -154,10 +154,10 @@ processState cmd f = case command cmd f of
     hPutStrLn stderr "Placement failure!"
     return Nothing
   Just field' -> do
-    hPutStrLn stderr $
-      "Score: " ++ show (score field')
-      ++ ", left " ++ show (sourceLength field')
-      ++ ", last command: " ++ show cmd
+    --hPutStrLn stderr $
+    --  "Score: " ++ show (score field')
+    --  ++ ", left " ++ show (sourceLength field')
+    --  ++ ", last command: " ++ show cmd
     when (isNothing $ unit field') $ hPutStrLn stderr "Success!"
     return $ Just field'
 
@@ -195,6 +195,7 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
   Char 'l' -> doCmd (Move E) >>= updBot
   Char 'u' -> doCmd (Turn CW) >>= updBot
   Char 'i' -> doCmd (Turn CCW) >>= updBot
+  SpecialKey KeyEsc -> finish $ reverse $ commands $ playState s
   SpecialKey KeySpace -> do
     let (cmd, bot') = advanceBot (field $ playState s) (bot $ playState s)
     s' <- doCmd cmd
@@ -306,33 +307,23 @@ process args = do
        then playIO window black 30 startState playShow (playEvent inp args) playAdvance
        else runBot inp args startPState
 
-   Solved -> undefined
-     --  [inp] <- head <$> mapM getFile (filePaths args)
-     --  problem <- getInput $ problemId inp
-     --  let startField = toField inp 0
-     --      startPState = PlayState { commands = dewordify $ solution inp
-     --                              , bot = newBot startField
-     --                              , field = startField
-     --                              , leftFields = [1..length (sourceSeeds inp)]
-     --                              , finishedFields = []
-     --                              }
-     --     startState = VisState { playState = startPState
-     --                           , viewState = viewStateInit
-     --                           , pic = fieldPicture $ resultField startField
-     --                           }
-     -- if visualize args
-     --   then playIO window black 30 startState playShow (playEvent inp args) playAdvance
-     --   else runBot startPState
-     --  let inp = inp' !! seedNo args
-     --  let startField = 
-     --      startState = PlayState { commands = 
-     --                             , viewState = viewStateInit
-     --                             , field = startField
-     --                             , bot = error "bot undefined for solution visualizations"
-     --                             , pic = fieldPicture $ resultField startField
-     --                             }
-
-     --  playIO window black 30 startState playShow visEvent playAdvance
+   Solved -> do
+     [inp] <- head <$> mapM getFile (filePaths args)
+     problem <- getInput $ problemId inp
+     let startField = toField problem 0
+         startPState = PlayState { commands = dewordify $ solution inp
+                                 , bot = newBot startField
+                                 , field = startField
+                                 , leftFields = map (toField problem) [1..length (D.sourceSeeds problem) - 1]
+                                 , finishedFields = []
+                                 }
+         startState = VisState { playState = startPState
+                               , viewState = viewStateInit
+                               , pic = fieldPicture $ resultField startField
+                               }
+     if visualize args
+       then playIO window black 30 startState playShow visEvent playAdvance
+       else fail "Solved bot unsupported"
 
 main :: IO ()
 main = execParser opts >>= process
