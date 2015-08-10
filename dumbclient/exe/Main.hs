@@ -3,6 +3,7 @@
 import Control.Monad
 import Data.Maybe
 import System.IO
+import Control.Concurrent (setNumCapabilities)
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -37,7 +38,7 @@ data OutputMode = Send
 data Arguments = Arguments { filePaths :: [String]
                            , timeLimit :: Integer
                            , memoryLimit :: Integer
-                           , coresNumber :: Integer
+                           , coresNumber :: Int
                            , phrases :: [String]
                            , inputSource :: InputSource
                            , inputFormat :: InputFormat
@@ -75,7 +76,7 @@ arguments = Arguments
   (  short 'c'
   <> long "cores"
   <> metavar "NUMBER"
-  <> help "Available processor cores (0 - autodetect)"
+  <> help "Available processor cores"
   <> value 0
   <> showDefault
   )
@@ -290,6 +291,8 @@ process args = do
       getRInput fp = case inputSource args of
         Online -> getInput $ read fp
         File -> getFile fp
+
+  when (coresNumber args /= 0) $ setNumCapabilities $ coresNumber args
 
   case inputFormat args of
    Standard -> do

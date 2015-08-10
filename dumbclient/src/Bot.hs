@@ -131,7 +131,7 @@ bestGame alln (GCrossroad _ startss) = fst $ maximumBy (comparing snd) $ map (\(
         best n (GCrossroad sc ss) = sc + maximum (parMap rseq (best (n - 1) . snd) $ M.toList ss)
 
 ourBestGame :: GameTree -> Solution
-ourBestGame = bestGame 4
+ourBestGame = bestGame 6
 
 data Bot = Bot { solution :: !Solution
                , currTree :: !GameTree
