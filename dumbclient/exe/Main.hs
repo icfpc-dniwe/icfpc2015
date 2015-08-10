@@ -154,10 +154,10 @@ processState cmd f = case command cmd f of
     hPutStrLn stderr "Placement failure!"
     return Nothing
   Just field' -> do
-    --hPutStrLn stderr $
-    --  "Score: " ++ show (score field')
-    --  ++ ", left " ++ show (sourceLength field')
-    --  ++ ", last command: " ++ show cmd
+    hPutStrLn stderr $
+      "Score: " ++ show (score field')
+      ++ ", left " ++ show (sourceLength field')
+      ++ ", last command: " ++ show cmd
     when (isNothing $ unit field') $ hPutStrLn stderr "Success!"
     return $ Just field'
 

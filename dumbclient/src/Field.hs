@@ -5,9 +5,10 @@ module Field where
 import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as S
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Linear.V2
 import Linear.V3
+import Debug.Trace
 
 import qualified ReadWrite as D
 import LCG
@@ -24,20 +25,21 @@ hcellToCell (V3 x _ z) = V2 (x + (z - z `mod` 2) `div` 2) z
 
 type HCells = Set HCell
 
-data HUnit = HUnit { center :: HCell
-                   , members :: HCells
+data HUnit = HUnit { center :: !HCell
+                   , pivot :: !HCell
+                   , members :: !HCells
                    }
            deriving (Show, Eq)
 
-data Field = Field { filled :: HCells
-                   , width :: Int
-                   , height :: Int
-                   , unit :: Maybe HUnit
-                   , availableUnits :: [HUnit]
-                   , sourceLength :: Int
-                   , randGen :: LCG
-                   , score :: Float
-                   , prevLines :: Int
+data Field = Field { filled :: !HCells
+                   , width :: !Int
+                   , height :: !Int
+                   , unit :: !(Maybe HUnit)
+                   , availableUnits :: ![HUnit]
+                   , sourceLength :: !Int
+                   , randGen :: !LCG
+                   , score :: !Float
+                   , prevLines :: !Int
                    }
            deriving (Show, Eq)
 
@@ -53,13 +55,13 @@ validate f@(Field { unit = Just u }) = distinct && borders
         borders = all (\(V2 x y) -> x >= 0 && x < width f && y >= 0 && y < height f) $ map hcellToCell $ S.toList cells
 validate (Field { unit = Nothing }) = True
 
-unitPlace :: HCells -> Int -> HCell
+unitPlace :: HUnit -> Int -> HCell
 unitPlace u w = cellToHCell $ V2 (c - left) (-top)
-  where border = map hcellToCell $ S.toList u
+  where border = map hcellToCell $ S.toList $ members u
         left = minimum $ map (\(V2 x _) -> x) border
         right = maximum $ map (\(V2 x _) -> x) border
         top = minimum $ map (\(V2 _ y) -> y) border
-        c = ((w - (right - left + 1)) `div` 2)
+        c = (w - (right - left + 1)) `div` 2
 
 clearLines :: Field -> (Int, Field)
 clearLines f = (tn, f { filled = S.fromList $ concatMap revert $ M.toList tm })
@@ -101,17 +103,19 @@ nextUnit f
   where (un, gen) = nextLCG $ randGen f
         u = availableUnits f !! (fromIntegral un `mod` length (availableUnits f))
 
-        f' = f { unit = Just u { center = unitPlace (members u) (width f)
+        f' = f { unit = Just u { center = unitPlace u (width f)
                                }
                , sourceLength = sourceLength f - 1
                , randGen = gen
                }
 
 toHUnit :: D.Unit -> HUnit
-toHUnit u = HUnit { center = V3 0 0 0
-                  , members = S.map ((subtract pivot) . cellToHCell) $ D.members u
-                  }
-  where pivot = cellToHCell $ D.pivot u
+toHUnit u = hu
+  where cpivot = cellToHCell $ D.pivot u
+        hu = HUnit { center = V3 0 0 0
+                   , pivot = cpivot
+                   , members = S.map cellToHCell $ D.members u
+                   }
 
 toField :: D.RawInput -> Int -> Field
 toField input nseed = fromJust $ nextUnit f
@@ -149,7 +153,7 @@ move u d = u { center = p + center u }
           SW -> V3 (-1) 0 1
 
 rotate :: HUnit -> TDirection -> HUnit
-rotate u d = u { members = S.map conv $ members u }
+rotate u d = u { members = S.map ((+ pivot u) . conv . subtract (pivot u)) $ members u }
   where conv (V3 x y z) = case d of
           CW -> V3 (-z) (-x) (-y)
           CCW -> V3 (-y) (-z) (-x)
