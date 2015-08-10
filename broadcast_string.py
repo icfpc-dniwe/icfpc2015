@@ -3,11 +3,11 @@
 import requests
 from requests.auth import HTTPBasicAuth
 import json
-import sys
+import os, sys
 import time
 
-TOKEN = "FaMnv73T2LUfm2Q83f3V0DGkslIyAxs8qouqJ5lanQk="
-TEAM = 180
+TOKEN = os.environ['TOKEN']
+TEAM = os.environ['TEAM_ID']
 URI = "https://davar.icfpcontest.org/teams/{team}/solutions".format(team = TEAM)
 
 SEED = 18
