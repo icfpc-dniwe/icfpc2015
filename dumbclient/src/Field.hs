@@ -157,18 +157,18 @@ rotate u d = u { members = S.map ((+ pivot u) . conv . subtract (pivot u)) $ mem
           CW -> V3 (-z) (-x) (-y)
           CCW -> V3 (-y) (-z) (-x)
 
-command :: Command -> Field -> Maybe Field
+command :: Command -> Field -> Field
 command cmd f@(Field { unit = Just u })
-  | validate f' = Just f'
+  | validate f' = f'
   | otherwise = case nextUnit (freezeUnit f) of
-    Nothing -> Nothing
-    Just f'' -> Just f''
+    Nothing -> f { unit = Nothing }
+    Just f'' -> f''
 
   where f' = f { unit = Just $ case cmd of
                   Move m -> move u m
                   Turn r -> rotate u r
                }
-command _ f@(Field { unit = Nothing }) = Just f
+command _ f@(Field { unit = Nothing }) = f
 
 neighbors :: HCell -> Set HCell
 neighbors c = S.fromList [c + sNW, c + sNE, c + sE, c + sSE, c + sSW, c + sW]

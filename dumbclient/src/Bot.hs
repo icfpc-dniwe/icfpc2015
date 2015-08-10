@@ -17,7 +17,7 @@ import Field
 
 import Debug.Trace
 
-data PathTree = DeadEnd !HCells !Float
+data PathTree = DeadEnd !HCells !Field
               | Crossroad !(Map Command PathTree)
               deriving (Show, Eq)
 
@@ -28,7 +28,12 @@ mergeSol _ _ = error "mergeSol: impossible!"
 
 type OldsSet = Set HCells
 
-type Solutions = Map HCells (Solution, Float)
+data SolutionInfo = SolutionInfo { solutionCmds :: !Solution
+                                 , newField :: !Field
+                                 }
+                  deriving (Show)
+
+type Solutions = Map HCells SolutionInfo
 
 mapMaybeM :: Monad m => (a -> m (Maybe b)) -> [a] -> m [b]
 mapMaybeM _ [] = return []
@@ -38,9 +43,9 @@ mapMaybeM f (h:t) = do
    Nothing -> mapMaybeM f t
    Just x -> (x :) <$> mapMaybeM f t
 
-validPaths :: Field -> PathTree
-validPaths (Field { unit = Nothing }) = error "validPaths: no unit on the field"
-validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.empty
+pathTree :: Field -> PathTree
+pathTree (Field { unit = Nothing }) = error "pathTree: no unit on the field"
+pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.empty
   where path :: [Command] -> (Field -> State OldsSet PathTree) -> Field -> State OldsSet PathTree
         path _ _ (Field { unit = Nothing }) = error "path: no unit on the field"
         path cmds next f@(Field { unit = Just u }) = do
@@ -48,15 +53,14 @@ validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.e
           Crossroad <$> M.fromList <$> mapMaybeM (\c -> fmap (c, ) <$> check (command c f)) cmds
 
           where 
-                dead f' = Just $ DeadEnd (absCoords u) (score f' - startScore)
+                dead f' = Just $ DeadEnd (absCoords u) f'
 
-                check Nothing = return $ Just $ DeadEnd S.empty 0
-                check (Just f'@(Field { unit = Just u' })) = do
+                check f'@(Field { unit = Just u' }) = do
                   olds <- get
                   if | sourceLength f' /= sourceLength startf -> return $ dead f'
                      | absCoords u' `S.member` olds -> return Nothing
                      | otherwise -> Just <$> next f'
-                check (Just f'@(Field { unit = Nothing })) = return $ dead f'
+                check f'@(Field { unit = Nothing }) = return $ dead f'
 
         cheight = maximum ys - minimum ys
           where ys = map (\(V3 _ _ z) -> z) $ S.toList $ members startu
@@ -75,12 +79,16 @@ validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.e
 -- TODO: can drop this to optimize further
 solutions :: PathTree -> Solutions
 solutions = sols []
-  where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
+  where sols cmds (DeadEnd cells f) = M.singleton cells $ SolutionInfo { solutionCmds = reverse cmds
+                                                                       , newField = f
+                                                                       }
         sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
-bests :: Field -> Solutions -> (Solution, Float)
-bests field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
-  where scorify cells sol scor = a1 * scor + 
+bests :: Field -> [SolutionInfo]
+bests field = map fst $ sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathTree field
+  where transform (cells, si) = (si, scorify cells (solutionCmds si) (score (newField si) - score field))
+
+        scorify cells sol scor = a1 * scor + 
           a2 * low cells + 
           a3 * whole +
           a4 * bump
@@ -100,20 +108,35 @@ bests field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, sco
         a3 = 30.0
         a4 = -5000.0
 
+data GameTree = GDeadEnd
+              | GCrossroad !Float !(Map Solution GameTree)
+              deriving (Show, Eq)
+
+gameTree :: Field -> GameTree
+gameTree startField = gt (score startField) startField
+  where gt _ field@(Field { unit = Nothing }) = GDeadEnd
+        gt decr field@(Field { unit = Just u }) =
+          GCrossroad (score field - decr) $ M.fromList $ map transform $ take bestN $ bests field 
+
+          where transform si = (solutionCmds si, gt (score field) (newField si))
+                bestN = 10
+
+
+
 data Bot = Bot { solution :: !Solution
                , unitNum :: !Int
                }
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f = Bot { solution = fst $ bests f $ solutions $ validPaths f
+newBot f = Bot { solution = solutionCmds $ head $ bests f
                , unitNum = sourceLength f
                }
 
 advanceBot :: Field -> Bot -> (Command, Bot)
 advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
-          | sourceLength f /= unitNum bot = Bot { solution = fst $ bests f $ solutions $ validPaths f
+          | sourceLength f /= unitNum bot = Bot { solution = solutionCmds $ head $ bests f
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot

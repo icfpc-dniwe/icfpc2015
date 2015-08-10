@@ -49,7 +49,7 @@ data Arguments = Arguments { filePaths :: [String]
 
 arguments :: Parser Arguments
 arguments = Arguments
-  <$> many (strOption
+  <$> some (strOption
   (  short 'f'
   <> long "file"
   <> metavar "FILENAME"
@@ -148,18 +148,15 @@ output args inp outps = do
      token <- B.pack <$> getEnv "TOKEN"
      postOutput team token outps'
 
-processState :: Command -> Field -> IO (Maybe Field)
-processState cmd f = case command cmd f of
-  Nothing -> do
-    hPutStrLn stderr "Placement failure!"
-    return Nothing
-  Just field' -> do
-    hPutStrLn stderr $
-      "Score: " ++ show (score field')
-      ++ ", left " ++ show (sourceLength field')
-      ++ ", last command: " ++ show cmd
-    when (isNothing $ unit field') $ hPutStrLn stderr "Success!"
-    return $ Just field'
+processState :: Command -> Field -> IO Field
+processState cmd f = do
+  let field' = command cmd f
+  hPutStrLn stderr $
+    "Score: " ++ show (score field')
+    ++ ", left " ++ show (sourceLength field')
+    ++ ", last command: " ++ show cmd
+  when (isNothing $ unit field') $ hPutStrLn stderr "Finished placement"
+  return field'
 
 playShow :: VisState -> IO Picture
 playShow s = return $ applyViewPortToPicture (viewStateViewPort $ viewState s) $ pic s
@@ -167,17 +164,14 @@ playShow s = return $ applyViewPortToPicture (viewStateViewPort $ viewState s) $
 runBot :: D.RawInput -> Arguments -> PlayState -> IO ()
 runBot ri args s = do
   let (cmd, bot') = advanceBot (field s) (bot s)
-  mfield <- processState cmd $ field s
-  case mfield of
-   Nothing -> finish (reverse $ commands s)
-   Just field' -> do
-     let cmds' = cmd : commands s
-     if isNothing $ unit field'
-       then finish (reverse cmds')
-       else runBot ri args s { field = field'
-                             , commands = cmds'
-                             , bot = bot'
-                             }
+  field' <- processState cmd $ field s
+  let cmds' = cmd : commands s
+  if isNothing $ unit field'
+    then finish (reverse cmds')
+    else runBot ri args s { field = field'
+                          , commands = cmds'
+                          , bot = bot'
+                          }
   where finish cmds' = if null (leftFields s)
                        then output args ri $ finishedFields s ++ [cmds']
                        else runBot ri args s { commands = []
@@ -205,19 +199,15 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
   where updBot ss = return ss { playState = (playState ss) { bot = newBot (field $ playState ss) } }
 
         doCmd cmd = do
-          mfield <- processState cmd $ field $ playState s
-          case mfield of
-           Nothing -> do
-             finish $ reverse $ commands $ playState s
-           Just field' -> do
-             let cmds' = cmd : commands (playState s)
-             if isNothing $ unit field'
-               then finish (reverse cmds')
-               else return s { playState = (playState s) { field = field'
-                                                         , commands = cmds'
-                                                         }
-                             , pic = fieldPicture $ resultField field'
-                             }
+          field' <- processState cmd $ field $ playState s
+          let cmds' = cmd : commands (playState s)
+          if isNothing $ unit field'
+            then finish (reverse cmds')
+            else return s { playState = (playState s) { field = field'
+                                                      , commands = cmds'
+                                                      }
+                          , pic = fieldPicture $ resultField field'
+                          }
         
         finish cmds' = if null (leftFields $ playState s)
                        then do
@@ -242,19 +232,14 @@ visEvent (EventKey (SpecialKey KeySpace) Down _ _) s = do
      hPutStrLn stderr "No more commands"
      finish
    (cmd:cmds) -> do
-     mfield <- processState cmd $ field $ playState s
-     case mfield of
-      Nothing -> do
-        hPutStrLn stderr "Placement failure!"
-        finish
-      Just field' -> do
-        if isNothing $ unit field'
-          then finish
-          else return s { playState = (playState s) { field = field'
-                                                    , commands = cmds
-                                                    }
-                        , pic = fieldPicture $ resultField field'
-                        }
+     field' <- processState cmd $ field $ playState s
+     if isNothing $ unit field'
+       then finish
+       else return s { playState = (playState s) { field = field'
+                                                 , commands = cmds
+                                                 }
+                     , pic = fieldPicture $ resultField field'
+                     }
 
   where finish = if null (leftFields $ playState s)
                  then fail "Finished!"
@@ -291,8 +276,7 @@ process args = do
 
   case inputFormat args of
    Standard -> do
-     -- TODO: fix
-     [inp] <- mapM getRInput (filePaths args)
+     (inp:inps) <- mapM getRInput (filePaths args)
      let startField = toField inp 0
          startPState = PlayState { commands = []
                                  , bot = newBot startField
@@ -309,7 +293,7 @@ process args = do
        else runBot inp args startPState
 
    Solved -> do
-     [inp] <- head <$> mapM getFile (filePaths args)
+     (inp:inps) <- mapM getFile (filePaths args)
      problem <- getInput $ problemId inp
      let startField = toField problem 0
          startPState = PlayState { commands = dewordify $ solution inp
