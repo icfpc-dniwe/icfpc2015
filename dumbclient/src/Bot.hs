@@ -15,6 +15,8 @@ import Linear.V3
 import Types
 import Field
 
+import Debug.Trace
+
 data PathTree = DeadEnd !HCells !Float
               | Crossroad !(Map Command PathTree)
               deriving (Show, Eq)
@@ -94,9 +96,9 @@ bests field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, sco
         bump = fromIntegral $ bumpiness cols
 
         a1 = 0.02
-        a2 = 1.0
-        a3 = 2.0
-        a4 = -5.0
+        a2 = 0.0
+        a3 = 30.0
+        a4 = -5000.0
 
 data Bot = Bot { solution :: !Solution
                , unitNum :: !Int
