@@ -36,21 +36,7 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
                , "yuggoth"
                , "necronomicon"
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
-              -- , "bigboote" -- ?
-               , "tsathoggua" -- ?
-               , "unnamable" -- ?
-               , "yith" -- ?
-               , "great race of yith" -- ?
-               , "celeano" -- ?
-               , "great hall of celeano" -- ?
-               , "plateau of leng" -- ?
-               , "abyss" -- ?
-               , "lost carcosa" -- ?
-               , "unknown kadath" -- ?
-               , "the dreamlands" -- ?
-               , "the underworld" -- ?
-               , "dreamlands" -- ?
-               , "underworlds" -- ?
+               , "john bigboote"
                ]
 
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b
@@ -65,15 +51,18 @@ checkWord cmd = foldr1 S.union $ map test $ M.toList powerWords
 checkWords :: Solution -> [Set String]
 checkWords = map checkWord . tails
 
+wordifyDumb :: Solution -> String
+wordifyDumb sol = foldr1 (++) $ map (pure . S.findMin) $ map (maps M.!) sol
+
 wordify' :: Solution -> String -> String
-wordify' sol str =
+wordify' [] str = str
+wordify' sol@(h:t) str =
   let pw_set = checkWord sol in
     if pw_set /= S.empty then
       let max_pw = S.findMax pw_set in
         wordify' (drop (length max_pw) sol) $ str ++ max_pw
     else
-      str
-wordify' [] str = str
+      wordify' t (str ++ wordifyDumb [h])
 
 wordify :: Solution -> String
 wordify sol = wordify' sol ""
