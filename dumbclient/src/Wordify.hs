@@ -29,7 +29,7 @@ remaps = M.fromList $ concatMap (\(cmd, cs) -> map (, cmd) $ S.toList cs) $ M.to
 
 powerWords :: Map Solution (Set String)
 powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleton s)) list
-  where list = [ "ei!"
+  where list = sortOn Down [ "ei!"
                , "ia! ia!"
                , "tsathoggua"
                , "r'lyeh"
@@ -37,6 +37,7 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
                , "necronomicon"
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
                , "john bigboote"
+               , "yogsothoth"
                ]
 
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b

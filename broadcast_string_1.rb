@@ -48,12 +48,12 @@ $phrases = [#"deep seven",#not
 			# "shantaks", #not
 			# "deep ones", #not
 			# "azathoth", #not
-			"john bigboote",
+			"john bigboote", #POWER_WORD
 			"10 planet",
 			"10th planet",
 			"h.p.lovecraft",
 			"h. p. lovecraft",
-			"2003 ub313",
+			"2003 ub313", #--
 			"yogsothoth",
 			"shubniggurath",
 			"nyarlathotep",
