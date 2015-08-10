@@ -30,9 +30,39 @@ $phrases = [#"deep seven",#not
 			#"abyss", #not
 			#"lovecraft", #not
 			#"necronomicon", #POWER_WORD
-			"ia! ia!",
-			"abbith",
-			"aldebaran",
+			#"ia! ia!", #POWER_WORD
+			#"abbith", #not
+			#"aldebaran", #not
+			#"r1 q0 p1 q1 p1 o0 n0 n0 p1 r1 q1 p1 o0 p1 q1 r1 p1 n0 n0 q1 s1 n1 t1 s1 r1 p1 r1 q1 p1 o0 o0 p1 q1 r1 p1 n0 n0", #not
+			#"r1q0p1q1p1o0n0n0p1r1q1p1o0p1q1r1p1n0n0q1s1n1t1s1r1p1r1q1p1o0o0p1q1r1p1n0n0",
+			#"ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!", #POWER_WORD
+			#"elder sign", #not
+			"r1 q0 p1 q1 p1 o0 n0 n0 p1 r1 q1 p1 o0 p1 q1 r1 p1 n0 n0 q1 s1 n1 t1 s1 r1 p1 r1 q1 p1 o0 o0 p1 q1 r1 p1 n0 n0 r1 r1 r1 p1 r1 t1 t0", #not
+			"r1q0p1q1p1o0n0n0p1r1q1p1o0p1q1r1p1n0n0q1s1n1t1s1r1p1r1q1p1o0o0p1q1r1p1n0n0r1r1r1p1r1t1t0", #not
+			"r1 q0 p1 q1 p1 o0 n0 n0 p1 r1 q1 p1 o0 p1 q1 r1 p1 n0 n0 q1 s1 n1 t1 s1 r1 p1 r1 q1 p1 o0 o0 p1 q1 r1 p1 n0 n0 t0", #not
+			"r1q0p1q1p1o0n0n0p1r1q1p1o0p1q1r1p1n0n0q1s1n1t1s1r1p1r1q1p1o0o0p1q1r1p1n0n0t0", #not
+			"the elder sign",
+			"shoggoth", # not
+			"yog sothoth", # not
+			"shub niggurath", #not
+			"shantaks", #not
+			"deep ones", #not
+			"azathoth",
+			"ghatanothoa",
+			"hastur",
+			"hypnos",
+			"ithaqua",
+			"nodens",
+			"nyarlathotep",
+			"arkham", 
+			"dunwich",
+			"innsmouth",
+			"kingsport",
+			"miskatonic university",
+			"miskatonic river",
+			"the nameless city",
+			"h.p.lovecraft",
+			"h. p. lovecraft",
 			"algol",
 			"arcturus",
 			"celaeno",
@@ -86,31 +116,6 @@ $phrases = [#"deep seven",#not
 			"dreamlands",
 			"underworlds",
 			"2003 ub313",
-			"r1 q0 p1 q1 p1 o0 n0 n0 p1 r1 q1 p1 o0 p1 q1 r1 p1 n0 n0 q1 s1 n1 t1 s1 r1 p1 r1 q1 p1 o0 o0 p1 q1 r1 p1 n0 n0",
-			"r1q0p1q1p1o0n0n0p1r1q1p1o0p1q1r1p1n0n0q1s1n1t1s1r1p1r1q1p1o0o0p1q1r1p1n0n0",
-			"elder sign",
-			"the elder sign",
-			"shoggoth",
-			"yog sothoth",
-			"shub niggurath",
-			"shantaks",
-			"deep ones",
-			"azathoth",
-			"ghatanothoa",
-			"hastur",
-			"hypnos",
-			"ithaqua",
-			"nodens",
-			"nyarlathotep",
-			"arkham", 
-			"dunwich",
-			"innsmouth",
-			"kingsport",
-			"miskatonic university",
-			"miskatonic river",
-			"the nameless city",
-			"h.p.lovecraft", #--
-			"h. p. lovecraft"
 	       ]
 seeds = [0,
 		 0,
@@ -182,7 +187,7 @@ Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
     	raise "Cthulhu is upon us!" unless res.is_a? Net::HTTPSuccess
 	}
 
-	for t in (0..300/interval)
+	for t in (0..250/interval)
 		sleep interval
 		begin
 			new_scores = get_scores $team

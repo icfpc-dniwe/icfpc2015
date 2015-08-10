@@ -9,6 +9,8 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.List
+import Data.Ord
 
 import Types
 
@@ -28,11 +30,11 @@ remaps = M.fromList $ concatMap (\(cmd, cs) -> map (, cmd) $ S.toList cs) $ M.to
 powerWords :: Map Solution (Set String)
 powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleton s)) list
   where list = [ "ei!"
-               , "ia!"
+               , "ia! ia!"
+               , "tsathoggua"
                , "r'lyeh"
                , "yuggoth"
-               , "deep seven" -- ?
-               , "chtonians" -- ?
+               , "necronomicon"
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
               -- , "bigboote" -- ?
                , "tsathoggua" -- ?
@@ -54,17 +56,27 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b
 findMaybe f = listToMaybe . mapMaybe f
 
-checkWord :: [Command] -> Set String
+checkWord :: Solution -> Set String
 checkWord cmd = foldr1 S.union $ map test $ M.toList powerWords
   where test (w, s) = if w `isPrefixOf` cmd
                       then s
                       else S.empty
 
-checkWords :: [Command] -> [Set String]
+checkWords :: Solution -> [Set String]
 checkWords = map checkWord . tails
 
+wordify' :: Solution -> String -> String
+wordify' sol str =
+  let pw_set = checkWord sol in
+    if pw_set /= S.empty then
+      let max_pw = S.findMax pw_set in
+        wordify' (drop (length max_pw) sol) $ str ++ max_pw
+    else
+      str
+wordify' [] str = str
+
 wordify :: Solution -> String
-wordify = map (S.findMin . (maps M.!))
+wordify sol = wordify' sol ""
 
 dewordify :: String -> Solution
 dewordify = map (remaps M.!)
