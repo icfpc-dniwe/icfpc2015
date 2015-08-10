@@ -73,6 +73,7 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         dropSome n next = path [Move SW, Move SE] (dropSome (n - 1) next)
         turn = tryOr [Turn CW, Turn CCW]
         moveH = tryOr [Move W, Move E]
+        drop = tryOr [Move SW, Move SE]
 
         myPath = moveH $ dropSome cheight $ turn $ dropAll
 
