@@ -77,7 +77,12 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         moveH = tryOr [Move W, Move E]
         drop = tryOr [Move SW, Move SE]
 
-        myPath = moveH $ dropSome cheight $ turn $ dropAll
+        followWord [] next f = next f
+        followWord (h:t) next f = mergeSol <$> path [h] (followWord t next) f <*> next f
+
+        followAnyWord words = foldl1 (.) $ map followWord words
+
+        myPath = followAnyWord (map dewordify powerWordsList) $ moveH $ dropSome cheight $ turn $ dropAll
 
 -- TODO: can drop this to optimize further
 solutions :: PathTree -> Solutions
@@ -111,7 +116,7 @@ bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathT
         a2 = 0.01
         a3 = 0.0
         a4 = -0.0
-        a5 = 100.0
+        a5 = 0.25
 
 data GameTree = GDeadEnd !Float
               | GCrossroad !Float !(Map Solution GameTree)
@@ -134,7 +139,7 @@ bestGame alln (GCrossroad _ startss) = fst $ maximumBy (comparing snd) $ map (\(
         best n (GCrossroad sc ss) = sc + maximum (parMap rseq (best (n - 1) . snd) $ M.toList ss)
 
 ourBestGame :: GameTree -> Solution
-ourBestGame = bestGame 6
+ourBestGame = bestGame 2
 
 data Bot = Bot { solution :: !Solution
                , currTree :: !GameTree

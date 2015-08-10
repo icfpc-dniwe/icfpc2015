@@ -27,9 +27,8 @@ maps = M.fromList $ map (second S.fromList) list
 remaps :: Map Char Command
 remaps = M.fromList $ concatMap (\(cmd, cs) -> map (, cmd) $ S.toList cs) $ M.toList maps
 
-powerWords :: Map Solution (Set String)
-powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleton s)) list
-  where list = sortOn Down [ "ei!"
+powerWordsList = sortOn Down
+               [ "ei!"
                , "ia! ia!"
                , "tsathoggua"
                , "r'lyeh"
@@ -38,7 +37,19 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
                , "john bigboote"
                , "yogsothoth"
+               --after contest
+               , "yoyodine"
+               , "vigintillon"
+               , "cthulhu fhtagn!"
+               , "in his his house at r'lyeh dead cthulhu waits dreaming"
+               , "planet 10"
+               , "monkeyboy"
+               , "blue hades"
+               , "case nightmare green"
                ]
+
+powerWords :: Map Solution (Set String)
+powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleton s)) powerWordsList
 
 findMaybe :: (a -> Maybe b) -> [a] -> Maybe b
 findMaybe f = listToMaybe . mapMaybe f
