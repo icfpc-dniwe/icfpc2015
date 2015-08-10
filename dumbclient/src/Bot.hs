@@ -68,6 +68,7 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         
         tryOr cmds next f = mergeSol <$> path cmds (tryOr cmds next) f <*> next f
 
+        dumb _ = return $ Crossroad M.empty 
         dropAll = path [Move SW, Move SE] dropAll
         dropSome 0 next = next
         dropSome n next = path [Move SW, Move SE] (dropSome (n - 1) next)
@@ -86,8 +87,8 @@ solutions = sols []
                                                                        }
         sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
-bests :: Field -> [SolutionInfo]
-bests field = map fst $ sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathTree field
+bests :: Field -> [(SolutionInfo, Float)]
+bests field = sortOn (Down . snd) $ map transform $ M.toList $ solutions $ pathTree field
   where transform (cells, si) = (si, scorify cells (solutionCmds si) (score (newField si) - score field))
 
         scorify cells sol scor = a1 * scor + 
@@ -115,30 +116,54 @@ data GameTree = GDeadEnd
               deriving (Show, Eq)
 
 gameTree :: Field -> GameTree
-gameTree startField = gt (score startField) startField
+gameTree = gt 0
   where gt _ field@(Field { unit = Nothing }) = GDeadEnd
-        gt decr field@(Field { unit = Just u }) =
-          GCrossroad (score field - decr) $ M.fromList $ map transform $ take bestN $ bests field 
+        gt sc field@(Field { unit = Just u }) =
+          GCrossroad sc $ M.fromList $ map transform $ take bestN $ bests field 
 
-          where transform si = (solutionCmds si, gt (score field) (newField si))
-                bestN = 10
+          where transform (si, sc) = (solutionCmds si, gt sc (newField si))
+                bestN = 4
 
+bestGame :: Int -> GameTree -> Solution
+bestGame _ GDeadEnd = error "bestGame: no future!"
+bestGame alln (GCrossroad _ startss) = fst $ maximumBy (comparing snd) $ map (\(s, gt) -> (s, best alln gt)) $ M.toList startss
+  where best 0 _ = 0
+        best n GDeadEnd = 0
+        best n (GCrossroad sc ss) = sc + maximum (map (best (n - 1) . snd) $ M.toList ss)
 
+ourBestGame :: GameTree -> Solution
+ourBestGame = bestGame 4
 
 data Bot = Bot { solution :: !Solution
+               , currTree :: !GameTree
+               , nextTree :: !GameTree
                , unitNum :: !Int
                }
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f = Bot { solution = solutionCmds $ head $ bests f
+newBot f = Bot { currTree = t
+               , nextTree = nt
+               , solution = s
                , unitNum = sourceLength f
                }
+  where t = gameTree f
+        nt = case t of
+          GDeadEnd -> GDeadEnd
+          GCrossroad _ ns -> ns M.! s
+        s = ourBestGame t
 
 advanceBot :: Field -> Bot -> (Command, Bot)
 advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
-          | sourceLength f /= unitNum bot = Bot { solution = solutionCmds $ head $ bests f
+          | sourceLength f /= unitNum bot = Bot { currTree = nextTree bot
+                                               , solution = s
+                                               , nextTree = nt
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot
+
+        s = ourBestGame $ nextTree bot
+        nt = case nextTree bot of
+             GDeadEnd -> GDeadEnd
+             GCrossroad _ ns -> ns M.! s
