@@ -9,6 +9,7 @@ import Linear.V2
 import Linear.V3
 
 import Types
+import Wordify
 import LCG
 import Field
 
@@ -20,8 +21,14 @@ instance Arbitrary a => Arbitrary (V3 a) where
   arbitrary = V3 <$> arbitrary <*> arbitrary <*> arbitrary
   shrink (V3 x y z) = map (\(x', y', z') -> V3 x' y' z') $ shrink (x, y, z)
 
+instance Arbitrary Command where
+  arbitrary = arbitraryBoundedEnum
+
 hcellCellConv :: Cell -> Bool
 hcellCellConv c = hcellToCell (cellToHCell c) == c
+
+wordifyDewordify :: Solution -> Bool
+wordifyDewordify c = dewordify (wordify c) == c
 
 rngExampleTest :: Assertion
 rngExampleTest = do
@@ -33,6 +40,7 @@ rngExampleTest = do
 tests :: TestTree
 tests = testGroup "tests"
         [ testProperty "hcell-cell conversion" hcellCellConv
+        , testProperty "wordify sanity" wordifyDewordify
         , testCase "rng example seq" rngExampleTest
         ]
 
