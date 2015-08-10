@@ -128,7 +128,7 @@ bestGame _ (GDeadEnd _) = error "bestGame: no future!"
 bestGame alln (GCrossroad _ startss) = fst $ maximumBy (comparing snd) $ map (\(s, gt) -> (s, best alln gt)) $ M.toList startss
   where best _ (GDeadEnd sc) = sc
         best 0 (GCrossroad sc _) = sc
-        best n (GCrossroad sc ss) = maximum (map (best (n - 1) . snd) $ M.toList ss)
+        best n (GCrossroad sc ss) = sc + maximum (map (best (n - 1) . snd) $ M.toList ss)
 
 ourBestGame :: GameTree -> Solution
 ourBestGame = bestGame 4
