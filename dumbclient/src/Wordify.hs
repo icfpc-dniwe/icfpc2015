@@ -34,7 +34,7 @@ powerWords = M.fromListWith S.union $ map (\s -> (map (remaps M.!) s, S.singleto
                , "deep seven" -- ?
                , "chtonians" -- ?
                , "ph'nglui mglw'nafh cthulhu r'lyeh wgah'nagl fhtagn!"
-               , "bigboote" -- ?
+              -- , "bigboote" -- ?
                , "tsathoggua" -- ?
                , "unnamable" -- ?
                , "yith" -- ?

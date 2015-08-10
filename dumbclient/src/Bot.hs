@@ -104,9 +104,9 @@ bests field = map fst $ sortOn (Down . snd) $ map transform $ M.toList $ solutio
         bump = fromIntegral $ bumpiness cols
 
         a1 = 0.02
-        a2 = 0.0
+        a2 = 0.01
         a3 = 30.0
-        a4 = -5000.0
+        a4 = -50.0
 
 data GameTree = GDeadEnd
               | GCrossroad !Float !(Map Solution GameTree)
