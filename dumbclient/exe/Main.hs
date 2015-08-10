@@ -119,13 +119,14 @@ arguments = Arguments
   <> help "Graphical mode: HJKL to move, UI to rotate"
   )
 
-data PlayState = PlayState { commands :: !Solution
+data PlayState = PlayState { rawInput :: !D.RawInput
+                           , commands :: !Solution
                            , bot :: !Bot
                            , field :: !Field
                            , leftFields :: ![Field]
                            , finishedFields :: ![Solution]
+                           , nextProblem :: !(IO (Maybe PlayState))
                            }
-               deriving (Show, Eq)
 
 data VisState = VisState { playState :: !PlayState
                          , viewState :: !ViewState
@@ -161,28 +162,33 @@ processState cmd f = do
 playShow :: VisState -> IO Picture
 playShow s = return $ applyViewPortToPicture (viewStateViewPort $ viewState s) $ pic s
 
-runBot :: D.RawInput -> Arguments -> PlayState -> IO ()
-runBot ri args s = do
+runBot :: Arguments -> PlayState -> IO ()
+runBot args s = do
   let (cmd, bot') = advanceBot (field s) (bot s)
   field' <- processState cmd $ field s
   let cmds' = cmd : commands s
   if isNothing $ unit field'
     then finish (reverse cmds')
-    else runBot ri args s { field = field'
-                          , commands = cmds'
-                          , bot = bot'
-                          }
+    else runBot args s { field = field'
+                       , commands = cmds'
+                       , bot = bot'
+                       }
   where finish cmds' = if null (leftFields s)
-                       then output args ri $ finishedFields s ++ [cmds']
-                       else runBot ri args s { commands = []
-                                             , field = head $ leftFields s
-                                             , bot = newBot $ head $ leftFields s
-                                             , finishedFields = finishedFields s ++ [cmds']
-                                             , leftFields = tail $ leftFields s
-                                             }
+                       then do
+                         output args (rawInput s) $ finishedFields s ++ [cmds']
+                         next <- nextProblem s
+                         case next of
+                          Just ps' -> runBot args ps'
+                          Nothing -> return ()
+                       else runBot args s { commands = []
+                                          , field = head $ leftFields s
+                                          , bot = newBot $ head $ leftFields s
+                                          , finishedFields = finishedFields s ++ [cmds']
+                                          , leftFields = tail $ leftFields s
+                                          }
 
-playEvent :: D.RawInput -> Arguments -> Event -> VisState -> IO VisState
-playEvent ri args ev@(EventKey c Down _ _) s = case c of
+playEvent :: Arguments -> Event -> VisState -> IO VisState
+playEvent args ev@(EventKey c Down _ _) s = case c of
   Char 'h' -> doCmd (Move W) >>= updBot
   Char 'j' -> doCmd (Move SW) >>= updBot
   Char 'k' -> doCmd (Move SE) >>= updBot
@@ -211,8 +217,13 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
         
         finish cmds' = if null (leftFields $ playState s)
                        then do
-                         output args ri $ finishedFields (playState s) ++ [cmds']
-                         fail "Finished!"
+                         output args (rawInput $ playState s) $ finishedFields (playState s) ++ [cmds']
+                         next <- nextProblem $ playState s
+                         case next of
+                          Just ps' -> return s { playState = ps'
+                                              , pic = fieldPicture $ resultField $ field ps'
+                                              }
+                          Nothing -> fail "Finished!"
                        else let ps' = (playState s) { commands = []
                                                     , field = head $ leftFields $ playState s
                                                     , bot = newBot $ head $ leftFields $ playState s
@@ -223,7 +234,7 @@ playEvent ri args ev@(EventKey c Down _ _) s = case c of
                                         , pic = fieldPicture $ resultField $ field ps'
                                         }
 
-playEvent _ _ ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
+playEvent _ ev s = return s { viewState = updateViewStateWithEvent ev $ viewState s }
 
 visEvent :: Event -> VisState -> IO VisState
 visEvent (EventKey (SpecialKey KeySpace) Down _ _) s = do
@@ -242,7 +253,13 @@ visEvent (EventKey (SpecialKey KeySpace) Down _ _) s = do
                      }
 
   where finish = if null (leftFields $ playState s)
-                 then fail "Finished!"
+                 then do
+                   next <- nextProblem $ playState s
+                   case next of
+                       Just ps' -> return s { playState = ps'
+                                           , pic = fieldPicture $ resultField $ field ps'
+                                           }
+                       Nothing -> fail "Finished!"
                  else let ps' = (playState s) { commands = head $ finishedFields $ playState s
                                               , field = head $ leftFields $ playState s
                                               , bot = newBot $ head $ leftFields $ playState s
@@ -276,39 +293,50 @@ process args = do
 
   case inputFormat args of
    Standard -> do
-     (inp:inps) <- mapM getRInput (filePaths args)
-     let startField = toField inp 0
-         startPState = PlayState { commands = []
-                                 , bot = newBot startField
-                                 , field = startField
-                                 , leftFields = map (toField inp) [1..length (D.sourceSeeds inp) - 1]
-                                 , finishedFields = []
-                                 }
-         startState = VisState { playState = startPState
+     inps <- mapM getRInput (filePaths args)
+     let fill [] = return Nothing
+         fill (i:is) = return $ Just PlayState { rawInput = i
+                                               , commands = []
+                                               , bot = newBot startField
+                                               , field = startField
+                                               , leftFields = map (toField i) [1..length (D.sourceSeeds i) - 1]
+                                               , finishedFields = []
+                                               , nextProblem = fill is
+                                               }
+           where startField = toField i 0
+
+     Just ps <- fill inps
+     let startState = VisState { playState = ps
                                , viewState = viewStateInit
-                               , pic = fieldPicture $ resultField startField
+                               , pic = fieldPicture $ resultField $ field ps
                                }
      if visualize args
-       then playIO window black 30 startState playShow (playEvent inp args) playAdvance
-       else runBot inp args startPState
+       then playIO window black 30 startState playShow (playEvent args) playAdvance
+       else runBot args ps
 
    Solved -> do
-     (inp:inps) <- mapM getFile (filePaths args)
-     problem <- getInput $ problemId inp
-     let startField = toField problem 0
-         startPState = PlayState { commands = dewordify $ solution inp
-                                 , bot = newBot startField
-                                 , field = startField
-                                 , leftFields = map (toField problem) [1..length (D.sourceSeeds problem) - 1]
-                                 , finishedFields = []
-                                 }
-         startState = VisState { playState = startPState
+     inps <- mapM getFile (filePaths args)
+     let fill [] = return Nothing
+         fill (i:is) = do
+           problem <- getInput $ problemId i
+           let startField = toField problem 0
+           return $ Just PlayState { rawInput = problem
+                                   , commands = dewordify $ solution i
+                                   , bot = newBot startField
+                                   , field = startField
+                                   , leftFields = map (toField problem) [1..length (D.sourceSeeds problem) - 1]
+                                   , finishedFields = []
+                                   , nextProblem = fill is
+                                   }
+
+     Just ps <- fill inps
+     let startState = VisState { playState = ps
                                , viewState = viewStateInit
-                               , pic = fieldPicture $ resultField startField
+                               , pic = fieldPicture $ resultField $ field ps
                                }
      if visualize args
        then playIO window black 30 startState playShow visEvent playAdvance
-       else fail "Solved bot unsupported"
+       else fail "Non-interactive Solved is bot unsupported"
 
 main :: IO ()
 main = execParser opts >>= process
