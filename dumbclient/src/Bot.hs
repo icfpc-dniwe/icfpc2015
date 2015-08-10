@@ -74,6 +74,7 @@ findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol,
         low cells = fromIntegral (sum $ map (\(V3 _ _ z) -> z) $ S.toList cells)
         whole = sum (map (\c -> if S.null $ neighbors c S.\\ filled then 1 else 0) $ S.toList filled)
         bump = 0
+        --cols = M.toList M.fromListWith max $ map (\(V2 x y) -> (x, y)) $ hcellToCell $ S.toList filled
         a1 = 0.02
         a2 = 1.0
         a3 = 2.0
