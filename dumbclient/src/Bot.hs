@@ -83,7 +83,7 @@ bests field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, sco
           a3 * whole +
           a4 * bump
 
-        bumpiness (a:b:hs) = abs (a - b) + bumpiness hs
+        bumpiness (a:b:hs) = abs (a - b) + bumpiness (b:hs)
         bumpiness _ = 0
 
         cols' = M.fromListWith min $ map ((\(V2 x y) -> (x, y)) . hcellToCell) $ S.toList $ filled field
