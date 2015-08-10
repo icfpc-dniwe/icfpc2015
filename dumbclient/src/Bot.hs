@@ -74,6 +74,7 @@ pathTree startf@(Field { unit = Just startu }) = evalState (myPath startf) S.emp
         turn = tryOr [Turn CW, Turn CCW]
         moveH = tryOr [Move W, Move E]
         drop = tryOr [Move SW, Move SE]
+        dumb _ = return $ Crossroad M.empty
 
         myPath = moveH $ dropSome cheight $ turn $ dropAll
 
@@ -107,7 +108,7 @@ bests field = map fst $ sortOn (Down . snd) $ map transform $ M.toList $ solutio
         a1 = 0.02
         a2 = 0.01
         a3 = 30.0
-        a4 = -50.0
+        a4 = -40.0
 
 data GameTree = GDeadEnd
               | GCrossroad !Float !(Map Solution GameTree)
