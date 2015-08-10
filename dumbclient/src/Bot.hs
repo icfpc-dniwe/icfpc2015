@@ -4,12 +4,12 @@ module Bot where
 
 import Data.List
 import Data.Ord
-import Control.Parallel.Strategies
 import Control.Monad.State.Strict
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
+import Linear.V2
 import Linear.V3
 
 import Types
@@ -74,18 +74,25 @@ validPaths startf@(Field { unit = Just startu }) = evalState (myPath startf) S.e
 solutions :: PathTree -> Solutions
 solutions = sols []
   where sols cmds (DeadEnd cells scr) = M.singleton cells (reverse cmds, scr)
-        sols cmds (Crossroad ts) = foldr M.union M.empty $ parMap rseq (\(c, t) -> sols (c:cmds) t) $ M.toList ts
+        sols cmds (Crossroad ts) = foldr M.union M.empty $ map (\(c, t) -> sols (c:cmds) t) $ M.toList ts
 
-findBest :: HCells -> Solutions -> (Solution, Float)
-findBest filled = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
+findBest :: Field -> Solutions -> (Solution, Float)
+findBest field = maximumBy (comparing snd) . map (\(cells, (sol, int)) -> (sol, scorify cells sol int)) . M.toList
   where scorify cells sol scor = a1 * scor + 
           a2 * low cells + 
           a3 * whole +
           a4 * bump
-        low cells = fromIntegral (sum $ map (\(V3 _ _ z) -> z) $ S.toList cells)
-        whole = sum (map (\c -> if S.null $ neighbors c S.\\ filled then 1 else 0) $ S.toList filled)
-        bump = 0
-        --cols = M.toList M.fromListWith max $ map (\(V2 x y) -> (x, y)) $ hcellToCell $ S.toList filled
+
+        bumpiness (a:b:hs) = abs (a - b) + bumpiness hs
+        bumpiness _ = 0
+
+        cols' = M.fromListWith min $ map ((\(V2 x y) -> (x, y)) . hcellToCell) $ S.toList $ filled field
+        cols = map snd $ M.toAscList $ cols' `M.union` M.fromList (zip [0..width field - 1] [0,0..])
+
+        low cells = fromIntegral $ sum $ map (\(V3 _ _ z) -> z) $ S.toList cells
+        whole = sum (map (\c -> if S.null $ neighbors c S.\\ filled field then 1 else 0) $ S.toList $ filled field)
+        bump = fromIntegral $ bumpiness cols
+
         a1 = 0.02
         a2 = 1.0
         a3 = 2.0
@@ -97,14 +104,14 @@ data Bot = Bot { solution :: !Solution
          deriving (Show, Eq)
 
 newBot :: Field -> Bot
-newBot f = Bot { solution = fst $ findBest (filled f) $ solutions $ validPaths f
+newBot f = Bot { solution = fst $ findBest f $ solutions $ validPaths f
                , unitNum = sourceLength f
                }
 
 advanceBot :: Field -> Bot -> (Command, Bot)
 advanceBot f bot = (c, bot' { solution = cmds })
   where bot'@(Bot { solution = c:cmds })
-          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest (filled f) $ solutions $ validPaths f
+          | sourceLength f /= unitNum bot = Bot { solution = fst $ findBest f $ solutions $ validPaths f
                                                , unitNum = sourceLength f
                                                }
           | otherwise = bot
